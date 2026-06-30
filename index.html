@@ -494,6 +494,68 @@
           width: 152px;
         }
       }
+
+      /* APK Installation Guide Styling */
+      .install-guide {
+        border-top: 1px solid var(--line);
+        background: #110d14;
+      }
+
+      .guide-steps {
+        display: grid;
+        gap: 14px;
+      }
+
+      .guide-step {
+        display: flex;
+        gap: 16px;
+        align-items: flex-start;
+        border: 1px solid rgba(25, 200, 162, 0.15);
+        border-radius: 18px;
+        padding: 16px;
+        background: rgba(25, 200, 162, 0.03);
+      }
+
+      .guide-icon {
+        font-size: 24px;
+        flex: 0 0 auto;
+        padding: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+      }
+
+      .guide-content {
+        flex: 1 1 auto;
+      }
+
+      .guide-content b {
+        display: block;
+        font-size: 15px;
+        color: white;
+        margin-bottom: 4px;
+      }
+
+      .guide-content p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      .guide-tip {
+        margin-top: 8px;
+        padding: 8px 12px;
+        background: rgba(255, 211, 61, 0.1);
+        border-left: 3px solid var(--gold);
+        border-radius: 0 8px 8px 0;
+        font-size: 11px;
+        color: var(--ink);
+      }
     </style>
     <!-- Meta Pixel Code -->
     <script>
@@ -550,15 +612,15 @@
               <p class="brand-subtitle">Short dramas on mobile</p>
             </div>
           </div>
-          <div class="bonus">3888 руб Reward</div>
+          <div class="bonus">₹3,000 Reward</div>
         </div>
 
         <div class="showcase">
           <div class="poster-stage" aria-label="Mini Short app preview">
             <div class="drama-copy">
               <span class="tag">Free Short Dramas</span>
-              <h1>Watch Free & Claim a 3888 руб Cash Reward</h1>
-              <p>Download Mini Short to enjoy free episodes. Eligible new users can claim a 3888 руб reward after completing campaign steps.</p>
+              <h1>Watch Free & Claim a ₹3,000 Cash Reward</h1>
+              <p>Download Mini Short to enjoy free episodes. Eligible new users can claim a ₹3,000 reward after completing campaign steps.</p>
               <a class="hero-cta" href="https://8erffr78chjq.roventrixx.com/PBinfdspFI" onclick="return trackDownload(event, 'hero')">Download & Claim Reward</a>
             </div>
           </div>
@@ -616,7 +678,45 @@
             <div class="step-num">3</div>
             <div>
               <b>Claim Cash Reward</b>
-              <span>Eligible new users can claim the 3888 руб reward after completing the activity requirements.</span>
+              <span>Eligible new users can claim the ₹3,000 reward after completing the activity requirements.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section install-guide">
+        <div class="section-head">
+          <h2>APK Installation Guide</h2>
+          <span style="color: var(--mint);">100% Safe & Verified</span>
+        </div>
+        <div class="guide-steps">
+          <div class="guide-step">
+            <div class="guide-icon">📥</div>
+            <div class="guide-content">
+              <b>1. Click 'Download Anyway'</b>
+              <p>Android displays a standard alert for apps downloaded outside Google Play. Our app is 100% safe and verified.</p>
+              <div class="guide-tip">Click <strong style="color: var(--gold);">"Download anyway"</strong> when prompted.</div>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-icon">📂</div>
+            <div class="guide-content">
+              <b>2. Open the APK File</b>
+              <p>Once the download is complete, tap the notification or go to your device's "Downloads" folder.</p>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-icon">⚙️</div>
+            <div class="guide-content">
+              <b>3. Enable Installation (If Prompted)</b>
+              <p>If your browser asks for permission to install apps, tap <strong>Settings</strong> and toggle on <strong>"Allow from this source"</strong>.</p>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-icon">🎉</div>
+            <div class="guide-content">
+              <b>4. Install & Claim ₹3,000!</b>
+              <p>Tap <strong>"Install"</strong>, sign up, and start watching to claim your cash reward instantly.</p>
             </div>
           </div>
         </div>
@@ -630,7 +730,7 @@
 
       <footer>
         <p>
-          Mini Short episodes are free to watch. The 3888 руб new-user reward is available
+          Mini Short episodes are free to watch. The ₹3,000 new-user reward is available
           to eligible users who complete the campaign requirements. Availability may
           vary by region, campaign rules, and account status.
         </p>
