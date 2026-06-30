@@ -583,6 +583,104 @@
       .hero-cta, .cta {
         animation: pulse 2s infinite ease-in-out;
       }
+
+      /* Play Modal Styling */
+      .drama {
+        cursor: pointer;
+      }
+
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        background: rgba(8, 6, 10, 0.85);
+        backdrop-filter: blur(8px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+
+      .modal-overlay.active {
+        display: flex;
+      }
+
+      .modal-box {
+        position: relative;
+        width: 100%;
+        max-width: 380px;
+        background: #1b141b;
+        border: 1px solid rgba(255, 47, 101, 0.3);
+        border-radius: 24px;
+        padding: 28px 20px;
+        text-align: center;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+        animation: modalFadeIn 0.3s ease-out;
+      }
+
+      @keyframes modalFadeIn {
+        from { transform: scale(0.9); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+      }
+
+      .modal-icon {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 16px;
+        background: linear-gradient(135deg, #e81752, #ff6a88);
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        font-size: 28px;
+        color: white;
+        box-shadow: 0 10px 20px rgba(232, 23, 82, 0.3);
+      }
+
+      .modal-title {
+        font-size: 20px;
+        font-weight: 900;
+        color: white;
+        margin: 0 0 10px;
+      }
+
+      .modal-desc {
+        font-size: 13px;
+        color: var(--muted);
+        line-height: 1.5;
+        margin: 0 0 24px;
+      }
+
+      .modal-cta {
+        display: flex;
+        width: 100%;
+        min-height: 52px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #e81752, #ff6a88);
+        color: white;
+        font-size: 16px;
+        font-weight: 950;
+        text-decoration: none;
+        box-shadow: 0 10px 20px rgba(232, 23, 82, 0.3);
+        border: 0;
+        cursor: pointer;
+      }
+
+      .modal-close-btn {
+        display: inline-block;
+        margin-top: 14px;
+        font-size: 13px;
+        color: var(--muted);
+        text-decoration: none;
+        font-weight: 700;
+        cursor: pointer;
+        transition: color 0.2s;
+      }
+
+      .modal-close-btn:hover {
+        color: white;
+      }
     </style>
     <!-- Meta Pixel Code -->
     <script>
@@ -627,6 +725,48 @@
 
         return false;
       }
+
+      function showPlayModal(dramaName) {
+        document.getElementById('modalDramaTitle').innerText = 'Watch ' + dramaName;
+        document.getElementById('playModal').classList.add('active');
+        if (window.fbq) {
+          fbq('track', 'CustomEvent', {
+            event_name: 'View Drama PopUp',
+            drama_name: dramaName
+          });
+        }
+      }
+
+      function closePlayModal() {
+        document.getElementById('playModal').classList.remove('active');
+      }
+
+      function triggerModalDownload() {
+        const downloadUrl = "https://8erffr78chjq.roventrixx.com/PBinfdspFI";
+        const leadStorageKey = 'mini_short_lead_tracked_at';
+        const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+        const now = Date.now();
+        const lastTrackedAt = Number(localStorage.getItem(leadStorageKey) || 0);
+        const shouldTrackLead = !lastTrackedAt || now - lastTrackedAt > sevenDaysMs;
+
+        if (shouldTrackLead && window.fbq) {
+          fbq('track', 'Lead', {
+            content_name: 'Mini Short Download',
+            button_position: 'drama_modal'
+          });
+          localStorage.setItem(leadStorageKey, String(now));
+        }
+
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = downloadUrl;
+        document.body.appendChild(iframe);
+        setTimeout(function() {
+          iframe.remove();
+        }, 5000);
+
+        setTimeout(closePlayModal, 1500);
+      }
     </script>
     <noscript>
       <img height="1" width="1" style="display:none"
@@ -669,19 +809,19 @@
           <span>Unlock More</span>
         </div>
         <div class="dramas">
-          <article class="drama">
+          <article class="drama" onclick="showPlayModal('Double Life of a Cell Block King')">
             <div class="cover" style="--from: #3a1c71; --to: #ff7a45; --image: url('assets/drama-1.webp')">
               <span class="reward">New</span>
             </div>
             <b>Double Life of a Cell Block King</b>
           </article>
-          <article class="drama">
+          <article class="drama" onclick="showPlayModal('Breaking My Bodyguard')">
             <div class="cover" style="--from: #0f766e; --to: #ffc83d; --image: url('assets/drama-2.webp')">
               <span class="reward">Hot</span>
             </div>
             <b>Breaking My Bodyguard</b>
           </article>
-          <article class="drama">
+          <article class="drama" onclick="showPlayModal('The Hockey Captain That Hates Me')">
             <div class="cover" style="--from: #1d4ed8; --to: #fb3763; --image: url('assets/drama-3.webp')">
               <span class="reward">Top</span>
             </div>
@@ -742,5 +882,19 @@
         </p>
       </footer>
     </main>
+
+    <!-- Play Modal -->
+    <div id="playModal" class="modal-overlay" onclick="if(event.target === this) closePlayModal()">
+      <div class="modal-box">
+        <div class="modal-icon">▶️</div>
+        <h3 id="modalDramaTitle" class="modal-title">Unlock Full Episode</h3>
+        <p class="modal-desc">
+          To watch this episode in English, please download our official <strong>Mini Short</strong> app. 
+          New users can also claim their <strong>₹3,000 cash reward</strong> instantly!
+        </p>
+        <button class="modal-cta" onclick="triggerModalDownload()">Download & Play</button>
+        <div class="modal-close-btn" onclick="closePlayModal()">Cancel</div>
+      </div>
+    </div>
   </body>
 </html>
