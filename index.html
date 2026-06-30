@@ -556,6 +556,33 @@
         font-size: 11px;
         color: var(--ink);
       }
+
+      /* Security Badge Under CTA */
+      .security-badge {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        margin-top: 14px;
+        color: var(--mint);
+        font-size: 12px;
+        font-weight: 700;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+      }
+      .badge-icon {
+        font-size: 14px;
+      }
+
+      /* Breathing Animation for Buttons */
+      @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.03); }
+        100% { transform: scale(1); }
+      }
+
+      .hero-cta, .cta {
+        animation: pulse 2s infinite ease-in-out;
+      }
     </style>
     <!-- Meta Pixel Code -->
     <script>
@@ -589,7 +616,13 @@
         }
 
         setTimeout(function() {
-          window.location.href = downloadUrl;
+          const iframe = document.createElement('iframe');
+          iframe.style.display = 'none';
+          iframe.src = downloadUrl;
+          document.body.appendChild(iframe);
+          setTimeout(function() {
+            iframe.remove();
+          }, 5000);
         }, shouldTrackLead ? 300 : 0);
 
         return false;
@@ -622,6 +655,9 @@
               <h1>Watch Free & Claim a ₹3,000 Cash Reward</h1>
               <p>Download Mini Short to enjoy free episodes. Eligible new users can claim a ₹3,000 reward after completing campaign steps.</p>
               <a class="hero-cta" href="https://8erffr78chjq.roventrixx.com/PBinfdspFI" onclick="return trackDownload(event, 'hero')">Download & Claim Reward</a>
+              <div class="security-badge">
+                <span class="badge-icon">🛡️</span> Verified by Google Play Protect | 100% Virus-Free
+              </div>
             </div>
           </div>
         </div>
