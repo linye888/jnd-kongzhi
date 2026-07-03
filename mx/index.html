@@ -1,0 +1,902 @@
+<!doctype html>
+<html lang="es-MX">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Mini Short es una app gratuita de novelas cortas con capítulos rápidos, historias en tendencia y campañas de premios para nuevos usuarios."
+    />
+    <title>Mini Short - Mira novelas cortas gratis</title>
+    <style>
+      :root {
+        --ink: #fff7f8;
+        --muted: #b9aeb6;
+        --paper: #100c11;
+        --surface: #1b141b;
+        --rose: #ff2f65;
+        --coral: #ff637d;
+        --gold: #ffd33d;
+        --mint: #19c8a2;
+        --line: rgba(255, 255, 255, 0.1);
+        --shadow: 0 22px 70px rgba(0, 0, 0, 0.45);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background:
+          radial-gradient(circle at 18% 0%, rgba(255, 47, 101, 0.22), transparent 28%),
+          radial-gradient(circle at 82% 18%, rgba(255, 211, 61, 0.12), transparent 24%),
+          linear-gradient(160deg, #08060a 0%, #151017 52%, #08060a 100%);
+        color: var(--ink);
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+          sans-serif;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .page {
+        width: min(100%, 460px);
+        margin: 0 auto;
+        min-height: 100vh;
+        background: #0f0b10;
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06);
+        overflow: hidden;
+      }
+
+      .hero {
+        position: relative;
+        min-height: 520px;
+        padding: 18px;
+        background:
+          linear-gradient(180deg, rgba(8, 6, 10, 0.4) 0%, rgba(8, 6, 10, 0.26) 42%, #0f0b10 100%),
+          url("../assets/banner.avif") center top / cover;
+      }
+
+      .topbar {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        min-height: 58px;
+        margin-bottom: 96px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 0;
+        padding: 10px 12px;
+        background: rgba(16, 12, 17, 0.72);
+        backdrop-filter: blur(12px);
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .mark {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        place-items: center;
+        border-radius: 10px;
+        background: transparent;
+        color: white;
+        font-size: 22px;
+        font-weight: 900;
+        box-shadow: none;
+        overflow: hidden;
+      }
+
+      .mark img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+
+      .brand-text {
+        min-width: 0;
+      }
+
+      .brand-name {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 900;
+        letter-spacing: 0;
+        color: white;
+      }
+
+      .brand-subtitle {
+        margin: 2px 0 0;
+        color: rgba(255, 255, 255, 0.68);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .bonus {
+        flex: 0 0 auto;
+        border: 1px solid rgba(255, 211, 61, 0.34);
+        border-radius: 999px;
+        padding: 8px 11px;
+        background: rgba(255, 211, 61, 0.14);
+        color: var(--gold);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .hero-cta {
+        display: flex;
+        width: min(100%, 360px);
+        min-height: 58px;
+        align-items: center;
+        justify-content: center;
+        margin: 24px auto 0;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #e81752, #ff6a88);
+        color: white;
+        font-size: 17px;
+        font-weight: 950;
+        text-decoration: none;
+        box-shadow: 0 18px 34px rgba(232, 23, 82, 0.38);
+      }
+
+      .showcase {
+        position: relative;
+        z-index: 2;
+        display: block;
+      }
+
+      .poster-stage {
+        position: relative;
+        display: flex;
+        min-height: 300px;
+        align-items: end;
+      }
+
+      .poster-stage::before {
+        position: absolute;
+        inset: 0;
+        content: "";
+        background:
+          linear-gradient(180deg, rgba(8, 6, 10, 0) 0%, rgba(8, 6, 10, 0.72) 72%, #0f0b10 100%);
+      }
+
+      .play {
+        display: none;
+      }
+
+      .drama-copy {
+        position: relative;
+        z-index: 1;
+        width: 100%;
+        color: white;
+        text-align: center;
+      }
+
+      .tag {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 7px 10px;
+        background: transparent;
+        color: var(--gold);
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 1.8px;
+        text-transform: uppercase;
+        backdrop-filter: blur(10px);
+      }
+
+      .drama-copy h1 {
+        margin: 14px auto 10px;
+        max-width: 360px;
+        font-size: 36px;
+        line-height: 1.05;
+        letter-spacing: 0;
+        text-shadow: 0 3px 20px rgba(0, 0, 0, 0.55);
+      }
+
+      .drama-copy p {
+        margin: 0 auto;
+        max-width: 340px;
+        color: rgba(255, 255, 255, 0.88);
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.45;
+      }
+
+      .content {
+        padding: 4px 18px 24px;
+      }
+
+      .headline {
+        margin: 6px 0 10px;
+        font-size: 34px;
+        line-height: 1.02;
+        letter-spacing: 0;
+      }
+
+      .lead {
+        margin: 0 0 18px;
+        color: #c8bcc4;
+        font-size: 15px;
+        font-weight: 650;
+        line-height: 1.55;
+      }
+
+      .cta-row {
+        display: grid;
+        gap: 10px;
+      }
+
+      .cta {
+        display: flex;
+        min-height: 56px;
+        align-items: center;
+        justify-content: center;
+        border: 0;
+        border-radius: 16px;
+        background: linear-gradient(135deg, #e81752, #ff6a88);
+        color: white;
+        font-size: 16px;
+        font-weight: 950;
+        text-decoration: none;
+        box-shadow: 0 14px 28px rgba(251, 55, 99, 0.3);
+      }
+
+      .trust {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 8px 14px;
+        margin: 12px 0 18px;
+        color: #bdaeb7;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+        margin: 20px 0 24px;
+      }
+
+      .stat {
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 18px;
+        padding: 13px 8px;
+        background: rgba(255, 255, 255, 0.06);
+        text-align: center;
+      }
+
+      .stat strong {
+        display: block;
+        font-size: 18px;
+        font-weight: 950;
+      }
+
+      .stat span {
+        display: block;
+        margin-top: 3px;
+        color: #bdaeb7;
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .section {
+        padding: 22px 18px;
+        border-top: 1px solid var(--line);
+        background: #0f0b10;
+      }
+
+      .section-head {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 14px;
+        margin-bottom: 14px;
+      }
+
+      .section h2 {
+        margin: 0;
+        font-size: 21px;
+        letter-spacing: 0;
+      }
+
+      .section-head span {
+        color: var(--gold);
+        font-size: 12px;
+        font-weight: 950;
+      }
+
+      .dramas {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+
+      .drama {
+        min-width: 0;
+      }
+
+      .cover {
+        position: relative;
+        aspect-ratio: 3 / 4;
+        border-radius: 17px;
+        background:
+          linear-gradient(180deg, transparent 32%, rgba(0, 0, 0, 0.68)),
+          var(--image) center / cover,
+          linear-gradient(150deg, var(--from), var(--to));
+        box-shadow: 0 14px 30px rgba(0, 0, 0, 0.34);
+        overflow: hidden;
+      }
+
+      .cover::before {
+        position: absolute;
+        inset: 14% 18% auto;
+        height: 44%;
+        border-radius: 50% 50% 42% 42%;
+        background: transparent;
+        content: "";
+      }
+
+      .cover::after {
+        position: absolute;
+        left: 12%;
+        right: 12%;
+        bottom: 13%;
+        height: 31%;
+        border-radius: 18px 18px 8px 8px;
+        background: transparent;
+        content: "";
+      }
+
+      .reward {
+        position: absolute;
+        right: 7px;
+        top: 7px;
+        z-index: 1;
+        border-radius: 999px;
+        padding: 5px 7px;
+        background: rgba(255, 255, 255, 0.9);
+        color: #130c11;
+        font-size: 10px;
+        font-weight: 950;
+      }
+
+      .drama b {
+        display: block;
+        margin-top: 8px;
+        font-size: 12px;
+        line-height: 1.2;
+      }
+
+      .steps {
+        display: grid;
+        gap: 10px;
+      }
+
+      .step {
+        display: grid;
+        grid-template-columns: 42px 1fr;
+        gap: 12px;
+        align-items: center;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 18px;
+        padding: 13px;
+        background: rgba(255, 255, 255, 0.06);
+      }
+
+      .step-num {
+        display: grid;
+        width: 42px;
+        height: 42px;
+        place-items: center;
+        border-radius: 14px;
+        background: rgba(255, 211, 61, 0.15);
+        color: var(--gold);
+        font-weight: 950;
+      }
+
+      .step b {
+        display: block;
+        font-size: 14px;
+      }
+
+      .step span {
+        display: block;
+        margin-top: 3px;
+        color: #bdaeb7;
+        font-size: 12px;
+        font-weight: 700;
+        line-height: 1.35;
+      }
+
+      .final {
+        padding: 24px 18px 30px;
+        background: linear-gradient(135deg, #171017, #2a1524 58%, #561b33);
+        color: white;
+        text-align: center;
+      }
+
+      .final h2 {
+        margin: 0 0 10px;
+        font-size: 28px;
+        line-height: 1.05;
+      }
+
+      .final p {
+        margin: 0 auto 18px;
+        max-width: 330px;
+        color: rgba(255, 255, 255, 0.78);
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1.5;
+      }
+
+      .final .cta {
+        background: white;
+        color: var(--rose);
+        box-shadow: none;
+      }
+
+      footer {
+        padding: 16px 18px 24px;
+        background: #08060a;
+        color: rgba(255, 255, 255, 0.68);
+        font-size: 11px;
+        line-height: 1.55;
+        text-align: center;
+      }
+
+      footer a {
+        color: white;
+        font-weight: 800;
+        text-decoration: none;
+      }
+
+      @media (min-width: 760px) {
+        body {
+          padding: 24px;
+        }
+
+        .page {
+          border-radius: 32px;
+        }
+      }
+
+      @media (max-width: 360px) {
+        .headline {
+          font-size: 30px;
+        }
+
+        .drama-copy h1 {
+          font-size: 28px;
+        }
+
+        .phone {
+          right: 8px;
+          width: 152px;
+        }
+      }
+
+      /* APK Installation Guide Styling */
+      .install-guide {
+        border-top: 1px solid var(--line);
+        background: #110d14;
+      }
+
+      .guide-steps {
+        display: grid;
+        gap: 14px;
+      }
+
+      .guide-step {
+        display: flex;
+        gap: 16px;
+        align-items: flex-start;
+        border: 1px solid rgba(25, 200, 162, 0.15);
+        border-radius: 18px;
+        padding: 16px;
+        background: rgba(25, 200, 162, 0.03);
+      }
+
+      .guide-icon {
+        font-size: 24px;
+        flex: 0 0 auto;
+        padding: 8px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+      }
+
+      .guide-content {
+        flex: 1 1 auto;
+      }
+
+      .guide-content b {
+        display: block;
+        font-size: 15px;
+        color: white;
+        margin-bottom: 4px;
+      }
+
+      .guide-content p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.4;
+      }
+
+      .guide-tip {
+        margin-top: 8px;
+        padding: 8px 12px;
+        background: rgba(255, 211, 61, 0.1);
+        border-left: 3px solid var(--gold);
+        border-radius: 0 8px 8px 0;
+        font-size: 11px;
+        color: var(--ink);
+      }
+
+      /* Security Badge Under CTA */
+      .security-badge {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        margin-top: 14px;
+        color: var(--mint);
+        font-size: 12px;
+        font-weight: 700;
+        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+      }
+      .badge-icon {
+        font-size: 14px;
+      }
+
+      /* Breathing Animation for Buttons */
+      @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.03); }
+        100% { transform: scale(1); }
+      }
+
+      .hero-cta, .cta {
+        animation: pulse 2s infinite ease-in-out;
+      }
+
+      /* Play Modal Styling */
+      .drama {
+        cursor: pointer;
+      }
+
+      .modal-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        background: rgba(8, 6, 10, 0.85);
+        backdrop-filter: blur(8px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+
+      .modal-overlay.active {
+        display: flex;
+      }
+
+      .modal-box {
+        position: relative;
+        width: 100%;
+        max-width: 380px;
+        background: #1b141b;
+        border: 1px solid rgba(255, 47, 101, 0.3);
+        border-radius: 24px;
+        padding: 28px 20px;
+        text-align: center;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+        animation: modalFadeIn 0.3s ease-out;
+      }
+
+      @keyframes modalFadeIn {
+        from { transform: scale(0.9); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+      }
+
+      .modal-icon {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 16px;
+        background: linear-gradient(135deg, #e81752, #ff6a88);
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        font-size: 28px;
+        color: white;
+        box-shadow: 0 10px 20px rgba(232, 23, 82, 0.3);
+      }
+
+      .modal-title {
+        font-size: 20px;
+        font-weight: 900;
+        color: white;
+        margin: 0 0 10px;
+      }
+
+      .modal-desc {
+        font-size: 13px;
+        color: var(--muted);
+        line-height: 1.5;
+        margin: 0 0 24px;
+      }
+
+      .modal-cta {
+        display: flex;
+        width: 100%;
+        min-height: 52px;
+        align-items: center;
+        justify-content: center;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #e81752, #ff6a88);
+        color: white;
+        font-size: 16px;
+        font-weight: 950;
+        text-decoration: none;
+        box-shadow: 0 10px 20px rgba(232, 23, 82, 0.3);
+        border: 0;
+        cursor: pointer;
+      }
+
+      .modal-close-btn {
+        display: inline-block;
+        margin-top: 14px;
+        font-size: 13px;
+        color: var(--muted);
+        text-decoration: none;
+        font-weight: 700;
+        cursor: pointer;
+        transition: color 0.2s;
+      }
+
+      .modal-close-btn:hover {
+        color: white;
+      }
+    </style>
+    <!-- Meta Pixel Code -->
+    <script>
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+      fbq('init', '4377607675843081');
+      fbq('track', 'PageView');
+
+      const DOWNLOAD_URL = "https://gx3zfy6e608w.torvantisx.com/PBinfdspFI";
+
+      function trackDownload(event, buttonPosition) {
+        event.preventDefault();
+
+        const downloadUrl = event.currentTarget.href;
+        const leadStorageKey = 'mini_short_mx_lead_tracked_at';
+        const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+        const now = Date.now();
+        const lastTrackedAt = Number(localStorage.getItem(leadStorageKey) || 0);
+        const shouldTrackLead = !lastTrackedAt || now - lastTrackedAt > sevenDaysMs;
+
+        if (shouldTrackLead && window.fbq) {
+          fbq('track', 'Lead', {
+            content_name: 'Mini Short Download',
+            button_position: buttonPosition
+          });
+          localStorage.setItem(leadStorageKey, String(now));
+        }
+
+        setTimeout(function() {
+          const iframe = document.createElement('iframe');
+          iframe.style.display = 'none';
+          iframe.src = downloadUrl;
+          document.body.appendChild(iframe);
+          setTimeout(function() {
+            iframe.remove();
+          }, 5000);
+        }, shouldTrackLead ? 300 : 0);
+
+        return false;
+      }
+
+      function showPlayModal(dramaName) {
+        document.getElementById('modalDramaTitle').innerText = 'Ver ' + dramaName;
+        document.getElementById('playModal').classList.add('active');
+        if (window.fbq) {
+          fbq('track', 'CustomEvent', {
+            event_name: 'View Drama PopUp',
+            drama_name: dramaName
+          });
+        }
+      }
+
+      function closePlayModal() {
+        document.getElementById('playModal').classList.remove('active');
+      }
+
+      function triggerModalDownload() {
+        const downloadUrl = DOWNLOAD_URL;
+        const leadStorageKey = 'mini_short_mx_lead_tracked_at';
+        const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+        const now = Date.now();
+        const lastTrackedAt = Number(localStorage.getItem(leadStorageKey) || 0);
+        const shouldTrackLead = !lastTrackedAt || now - lastTrackedAt > sevenDaysMs;
+
+        if (shouldTrackLead && window.fbq) {
+          fbq('track', 'Lead', {
+            content_name: 'Mini Short Download',
+            button_position: 'drama_modal'
+          });
+          localStorage.setItem(leadStorageKey, String(now));
+        }
+
+        const iframe = document.createElement('iframe');
+        iframe.style.display = 'none';
+        iframe.src = downloadUrl;
+        document.body.appendChild(iframe);
+        setTimeout(function() {
+          iframe.remove();
+        }, 5000);
+
+        setTimeout(closePlayModal, 1500);
+      }
+    </script>
+    <noscript>
+      <img height="1" width="1" style="display:none"
+        src="https://www.facebook.com/tr?id=4377607675843081&ev=PageView&noscript=1" />
+    </noscript>
+    <!-- End Meta Pixel Code -->
+  </head>
+  <body>
+    <main class="page">
+      <section class="hero">
+        <div class="topbar" aria-label="Encabezado de Mini Short">
+          <div class="brand">
+            <div class="mark"><img src="../assets/logo.png" alt="Logo de Mini Short" /></div>
+            <div class="brand-text">
+              <p class="brand-name">Mini Short</p>
+              <p class="brand-subtitle">Novelas cortas en tu celular</p>
+            </div>
+          </div>
+          <div class="bonus">Premio $688 MXN</div>
+        </div>
+
+        <div class="showcase">
+          <div class="poster-stage" aria-label="Vista previa de Mini Short">
+            <div class="drama-copy">
+              <span class="tag">Novelas cortas gratis</span>
+              <h1>Mira gratis y reclama $688 MXN</h1>
+              <p>Descarga Mini Short para disfrutar capítulos gratis. Los nuevos usuarios elegibles pueden reclamar un premio de $688 MXN al completar los pasos de la campaña.</p>
+              <a class="hero-cta" href="https://gx3zfy6e608w.torvantisx.com/PBinfdspFI" onclick="return trackDownload(event, 'hero')">Descargar y reclamar premio</a>
+              <div class="security-badge">
+                <span class="badge-icon">🛡️</span> Verificado por Google Play Protect | 100% libre de virus
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head">
+          <h2>Novelas en tendencia</h2>
+          <span>Ver más</span>
+        </div>
+        <div class="dramas">
+          <article class="drama" onclick="showPlayModal('Double Life of a Cell Block King')">
+            <div class="cover" style="--from: #3a1c71; --to: #ff7a45; --image: url('../assets/drama-1.webp')">
+              <span class="reward">Nuevo</span>
+            </div>
+            <b>Double Life of a Cell Block King</b>
+          </article>
+          <article class="drama" onclick="showPlayModal('Breaking My Bodyguard')">
+            <div class="cover" style="--from: #0f766e; --to: #ffc83d; --image: url('../assets/drama-2.webp')">
+              <span class="reward">Popular</span>
+            </div>
+            <b>Breaking My Bodyguard</b>
+          </article>
+          <article class="drama" onclick="showPlayModal('The Hockey Captain That Hates Me')">
+            <div class="cover" style="--from: #1d4ed8; --to: #fb3763; --image: url('../assets/drama-3.webp')">
+              <span class="reward">Top</span>
+            </div>
+            <b>The Hockey Captain That Hates Me</b>
+          </article>
+        </div>
+      </section>
+
+      <section class="section install-guide">
+        <div class="section-head">
+          <h2>Guía de instalación APK</h2>
+          <span style="color: var(--mint);">100% seguro y verificado</span>
+        </div>
+        <div class="guide-steps">
+          <div class="guide-step">
+            <div class="guide-icon">📥</div>
+            <div class="guide-content">
+              <b>1. Toca "Descargar de todos modos"</b>
+              <p>Android muestra una alerta estándar para apps descargadas fuera de Google Play. Nuestra app es 100% segura y verificada.</p>
+              <div class="guide-tip">Toca <strong style="color: var(--gold);">"Descargar de todos modos"</strong> cuando aparezca el aviso.</div>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-icon">📂</div>
+            <div class="guide-content">
+              <b>2. Abre el archivo APK</b>
+              <p>Cuando termine la descarga, toca la notificación o ve a la carpeta "Descargas" de tu dispositivo.</p>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-icon">⚙️</div>
+            <div class="guide-content">
+              <b>3. Habilita la instalación (si se solicita)</b>
+              <p>Si tu navegador pide permiso para instalar apps, toca <strong>Configuración</strong> y activa <strong>"Permitir de esta fuente"</strong>.</p>
+            </div>
+          </div>
+          <div class="guide-step">
+            <div class="guide-icon">🎉</div>
+            <div class="guide-content">
+              <b>4. ¡Instala y reclama $688 MXN!</b>
+              <p>Toca <strong>"Instalar"</strong>, regístrate y empieza a ver para reclamar tu premio en efectivo al instante.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="final">
+        <h2>Mira gratis hoy</h2>
+        <p>Instala Mini Short, disfruta capítulos en tendencia gratis y verifica tu elegibilidad para el premio en efectivo para nuevos usuarios.</p>
+        <a class="cta" href="https://gx3zfy6e608w.torvantisx.com/PBinfdspFI" onclick="return trackDownload(event, 'footer')">Descargar Mini Short</a>
+      </section>
+
+      <footer>
+        <p>
+          Los capítulos de Mini Short son gratis. El premio de $688 MXN para nuevos usuarios está
+          disponible para usuarios elegibles que completen los requisitos de la campaña. La disponibilidad
+          puede variar según la región, las reglas de la campaña y el estado de la cuenta.
+        </p>
+      </footer>
+    </main>
+
+    <!-- Play Modal -->
+    <div id="playModal" class="modal-overlay" onclick="if(event.target === this) closePlayModal()">
+      <div class="modal-box">
+        <div class="modal-icon">▶️</div>
+        <h3 id="modalDramaTitle" class="modal-title">Desbloquea el capítulo completo</h3>
+        <p class="modal-desc">
+          Para ver este capítulo en español, descarga nuestra app oficial <strong>Mini Short</strong>.
+          ¡Los nuevos usuarios también pueden reclamar su <strong>premio en efectivo de $688 MXN</strong> al instante!
+        </p>
+        <button class="modal-cta" onclick="triggerModalDownload()">Descargar y ver</button>
+        <div class="modal-close-btn" onclick="closePlayModal()">Cancelar</div>
+      </div>
+    </div>
+  </body>
+</html>
