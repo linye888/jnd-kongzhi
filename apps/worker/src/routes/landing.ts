@@ -10,7 +10,9 @@ export async function handleLandingRequest(request: Request, env: Env, ctx: Exec
   if (url.pathname.startsWith("/api/") || url.pathname.startsWith("/admin")) return null;
 
   if (url.pathname.startsWith("/assets/")) {
-    return env.ASSETS.fetch(request);
+    const assetPath = url.pathname.slice("/assets".length) || "/";
+    const assetRequest = new Request(new URL(assetPath, request.url), request);
+    return env.ASSETS.fetch(assetRequest);
   }
 
   const hostname = url.hostname;
