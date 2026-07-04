@@ -16,7 +16,12 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
   const response = await fetch(`${API_BASE}${path}`, { ...init, headers });
-  const payload = await response.json();
+  let payload: { success?: boolean; data?: T; error?: string };
+  try {
+    payload = await response.json();
+  } catch {
+    throw new Error(`无法连接 API（${response.status}），请检查网络或 VITE_API_BASE 配置`);
+  }
   if (!response.ok || payload.success === false) {
     throw new Error(payload.error ?? `Request failed (${response.status})`);
   }

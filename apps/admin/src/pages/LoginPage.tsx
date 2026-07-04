@@ -1,12 +1,18 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, user } = useAuth();
+  const navigate = useNavigate();
   const [email, setEmail] = useState("admin@example.com");
   const [password, setPassword] = useState("admin123456");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (user) navigate("/", { replace: true });
+  }, [user, navigate]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -14,6 +20,7 @@ export default function LoginPage() {
     setError("");
     try {
       await login(email, password);
+      navigate("/", { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "登录失败");
     } finally {
@@ -37,7 +44,9 @@ export default function LoginPage() {
           密码
           <input value={password} onChange={(e) => setPassword(e.target.value)} type="password" required />
         </label>
-        <button className="btn btn-primary" disabled={loading}>{loading ? "登录中..." : "登录"}</button>
+        <button type="submit" className="btn btn-primary" disabled={loading}>
+          {loading ? "登录中..." : "登录"}
+        </button>
       </form>
     </div>
   );
