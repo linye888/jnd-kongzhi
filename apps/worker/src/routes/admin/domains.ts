@@ -72,7 +72,7 @@ app.post("/health-check", async (c) => {
     rows = rows.filter((row) => idSet.has(row.id));
   }
 
-  const results = await checkDomainsHealth(rows);
+  const results = await checkDomainsHealth(c.env, rows);
   return jsonResponse({ results });
 });
 
@@ -86,7 +86,7 @@ app.get("/:id/health", async (c) => {
     .where(eq(domains.id, id))
     .limit(1);
   if (!row) return errorResponse("Not found", 404);
-  const health = await checkDomainHealth(row.hostname, row.status);
+  const health = await checkDomainHealth(c.env, row.hostname, row.status);
   return jsonResponse({ id: row.id, hostname: row.hostname, health });
 });
 

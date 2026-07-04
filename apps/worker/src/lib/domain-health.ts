@@ -1,3 +1,7 @@
+import type { Env } from "../env";
+import { resolveDomain } from "./domains";
+import { handleLandingRequest } from "../routes/landing";
+
 export type DomainHealthState = "healthy" | "unhealthy" | "inactive";
 
 export interface DomainHealthResult {
@@ -8,9 +12,10 @@ export interface DomainHealthResult {
   checkedAt: string;
 }
 
-const CHECK_TIMEOUT_MS = 8000;
+const noopCtx = { waitUntil: () => undefined } as ExecutionContext;
 
 export async function checkDomainHealth(
+  env: Env,
   hostname: string,
   domainStatus: string,
 ): Promise<DomainHealthResult> {
@@ -20,19 +25,33 @@ export async function checkDomainHealth(
     return { ok: false, status: "inactive", message: "域名已停用", checkedAt };
   }
 
+  const resolved = await resolveDomain(env, hostname);
+  if (!resolved) {
+    return {
+      ok: false,
+      status: "unhealthy",
+      message: "后台未配置或未启用",
+      checkedAt,
+    };
+  }
+
   try {
-    const response = await fetch(`https://${hostname}/`, {
-      method: "GET",
-      redirect: "follow",
-      signal: AbortSignal.timeout(CHECK_TIMEOUT_MS),
-      headers: {
-        "User-Agent": "LP-Admin-HealthCheck/1.0",
-        Accept: "text/html",
-      },
-    });
+    const response = await handleLandingRequest(
+      new Request(`https://${hostname}/`, { method: "GET" }),
+      env,
+      noopCtx,
+    );
+
+    if (!response) {
+      return {
+        ok: false,
+        status: "unhealthy",
+        message: "Worker 未处理该请求",
+        checkedAt,
+      };
+    }
 
     const statusCode = response.status;
-
     if (statusCode === 200) {
       const snippet = (await response.text()).slice(0, 500);
       if (snippet.includes("Domain not configured")) {
@@ -40,7 +59,7 @@ export async function checkDomainHealth(
           ok: false,
           status: "unhealthy",
           statusCode,
-          message: "DNS 可能已通，但后台未匹配该 Host",
+          message: "Host 未匹配到落地页",
           checkedAt,
         };
       }
@@ -56,52 +75,32 @@ export async function checkDomainHealth(
       };
     }
 
-    if (statusCode === 403) {
-      return {
-        ok: false,
-        status: "unhealthy",
-        statusCode,
-        message: "403 禁止访问，检查 Worker 是否已绑定",
-        checkedAt,
-      };
-    }
-
-    if (statusCode === 404) {
-      return {
-        ok: false,
-        status: "unhealthy",
-        statusCode,
-        message: "404 未找到，检查后台是否已添加",
-        checkedAt,
-      };
-    }
-
     return {
       ok: false,
       status: "unhealthy",
       statusCode,
-      message: `HTTP ${statusCode}`,
+      message: statusCode === 403 ? "403 禁止访问，检查 Worker 绑定" : `HTTP ${statusCode}`,
       checkedAt,
     };
   } catch (error) {
-    const message =
-      error instanceof Error && error.name === "TimeoutError"
-        ? "连接超时（DNS 或 SSL 可能未就绪）"
-        : error instanceof Error
-          ? error.message
-          : "连接失败";
-    return { ok: false, status: "unhealthy", message, checkedAt };
+    return {
+      ok: false,
+      status: "unhealthy",
+      message: error instanceof Error ? error.message : "检测失败",
+      checkedAt,
+    };
   }
 }
 
 export async function checkDomainsHealth(
+  env: Env,
   rows: Array<{ id: number; hostname: string; status: string }>,
 ): Promise<Array<{ id: number; hostname: string; health: DomainHealthResult }>> {
   const results = await Promise.all(
     rows.map(async (row) => ({
       id: row.id,
       hostname: row.hostname,
-      health: await checkDomainHealth(row.hostname, row.status),
+      health: await checkDomainHealth(env, row.hostname, row.status),
     })),
   );
   return results;
