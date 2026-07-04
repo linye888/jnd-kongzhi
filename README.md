@@ -79,6 +79,7 @@ pnpm dev:admin
 | 项目 | 地址 |
 |------|------|
 | Worker API | https://lp-admin-worker.ceddnabby.workers.dev |
+| **Admin 后台** | https://lp-admin-6rt.pages.dev |
 | 健康检查 | https://lp-admin-worker.ceddnabby.workers.dev/health |
 | Fallback Origin（计划） | `origin.minishort.sbs` |
 | 客户 CNAME 目标 | `customers.minishort.sbs` |
@@ -86,18 +87,23 @@ pnpm dev:admin
 
 默认管理员：`admin@example.com` / `admin123456`（**请尽快修改**）
 
-### Admin 前端连接生产 API
+### Admin 前端（Cloudflare Pages）
+
+已部署：**https://lp-admin-6rt.pages.dev**
+
+本地重新部署：
 
 ```bash
 cd apps/admin
-VITE_API_BASE=https://lp-admin-worker.ceddnabby.workers.dev pnpm build
-# 将 dist/ 部署到 Cloudflare Pages 或任意静态托管
+pnpm deploy
 ```
 
-本地开发 Admin 连生产：
+或手动构建 + 部署：
 
 ```bash
-VITE_API_BASE=https://lp-admin-worker.ceddnabby.workers.dev pnpm dev:admin
+cd apps/admin
+pnpm build:production
+npx wrangler pages deploy dist --project-name=lp-admin
 ```
 
 ## Cloudflare for SaaS 开通指南（minishort.sbs）

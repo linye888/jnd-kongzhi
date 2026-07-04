@@ -38,6 +38,9 @@ importers:
       vite:
         specifier: ^7.0.2
         version: 7.3.6(tsx@4.23.0)
+      wrangler:
+        specifier: ^4.24.0
+        version: 4.107.0(@cloudflare/workers-types@4.20260702.1)
 
   apps/worker:
     dependencies:
