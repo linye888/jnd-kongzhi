@@ -44,11 +44,18 @@ interface DomainForm {
 }
 
 function HealthBadge({ health, checking }: { health?: DomainHealth; checking?: boolean }) {
-  if (checking || !health) {
+  if (checking) {
     return (
       <span className="health-label" title="检测中…">
         <span className="health-dot checking" />
         检测中
+      </span>
+    );
+  }
+  if (!health) {
+    return (
+      <span className="health-label muted" title="点击「重新检测」检查落地页">
+        —
       </span>
     );
   }
@@ -136,11 +143,7 @@ export default function DomainsPage() {
       })
       .catch(console.error);
 
-    load()
-      .then((domains) => {
-        if (domains.length > 0) runHealthCheck(domains.map((d) => d.id));
-      })
-      .catch(console.error);
+    load().catch(console.error);
   }, []);
 
   function onTemplateChange(templateId: string) {

@@ -88,7 +88,7 @@ export default function StatsPage() {
   useEffect(() => {
     Promise.all([
       loadStorage(),
-      api<DomainOption[]>("/api/admin/domains").then((rows) => setDomains(rows.map((r) => ({ id: r.id, hostname: r.hostname })))),
+      api<DomainOption[]>("/api/admin/domains?lite=1").then(setDomains),
     ]).catch(console.error);
   }, []);
 
