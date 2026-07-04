@@ -4,10 +4,11 @@ compatibility_date = "2025-07-04"
 compatibility_flags = ["nodejs_compat"]
 
 [vars]
-CNAME_TARGET = "customers.yourplatform.com"
-JWT_SECRET = "dev-secret-change-in-production"
+CNAME_TARGET = "customers.minishort.sbs"
 ADMIN_DEFAULT_EMAIL = "admin@example.com"
 ADMIN_DEFAULT_PASSWORD = "admin123456"
+CF_ZONE_ID = "be18f06f76ed1fd17bccf2cb877fdcf6"
+FALLBACK_ORIGIN = "origin.minishort.sbs"
 
 [triggers]
 crons = ["0 * * * *"]
@@ -15,12 +16,12 @@ crons = ["0 * * * *"]
 [[d1_databases]]
 binding = "DB"
 database_name = "lp-admin-db"
-database_id = "local-dev-db"
+database_id = "8e21f7cc-d9ad-4c84-8ac6-7bedaf93f766"
 migrations_dir = "../../packages/db/migrations"
 
 [[kv_namespaces]]
 binding = "KV"
-id = "local-dev-kv"
+id = "7f41a9c383044a259c4c87843a27b3b1"
 
 [[r2_buckets]]
 binding = "R2"

@@ -74,31 +74,57 @@ pnpm dev:admin
 | `CF_ZONE_ID` | SaaS Zone ID |
 | `CNAME_TARGET` | 客户域名 CNAME 目标 |
 
-## 部署
+## 生产环境（已部署）
 
-### Worker
+| 项目 | 地址 |
+|------|------|
+| Worker API | https://lp-admin-worker.ceddnabby.workers.dev |
+| 健康检查 | https://lp-admin-worker.ceddnabby.workers.dev/health |
+| Fallback Origin（计划） | `origin.minishort.sbs` |
+| 客户 CNAME 目标 | `customers.minishort.sbs` |
+| Cloudflare Zone | `minishort.sbs` |
 
-```bash
-cd apps/worker
-wrangler d1 migrations apply lp-admin-db --remote
-wrangler deploy
-wrangler secret put JWT_SECRET
-```
+默认管理员：`admin@example.com` / `admin123456`（**请尽快修改**）
 
-### Admin
+### Admin 前端连接生产 API
 
 ```bash
 cd apps/admin
-pnpm build
-# 部署 dist/ 到 Cloudflare Pages，设置 VITE_API_BASE 指向 Worker URL
+VITE_API_BASE=https://lp-admin-worker.ceddnabby.workers.dev pnpm build
+# 将 dist/ 部署到 Cloudflare Pages 或任意静态托管
 ```
 
-## Cloudflare for SaaS
+本地开发 Admin 连生产：
 
-1. 配置 Fallback Origin 指向 Worker
-2. 设置 `CF_*` 环境变量
-3. 后台添加域名时自动调用 Custom Hostnames API
-4. 客户将域名 CNAME 到 `CNAME_TARGET`
+```bash
+VITE_API_BASE=https://lp-admin-worker.ceddnabby.workers.dev pnpm dev:admin
+```
+
+## Cloudflare for SaaS 开通指南（minishort.sbs）
+
+当前 Token **缺少 Zone 级 SSL 权限**，Custom Hostnames 暂不可用。按以下步骤开通：
+
+### 1. 升级套餐（如需要）
+- 登录 Cloudflare → 选择 `minishort.sbs`
+- for SaaS 通常需要 **Business** 或联系 Cloudflare 开通 SaaS
+
+### 2. 补 API Token 权限
+- **SSL and Certificates → Edit**（Zone: minishort.sbs）
+- **Workers Routes → Edit**（可选，用于绑定自定义域路由）
+
+### 3. 配置 Fallback Origin
+- Cloudflare Dashboard → `minishort.sbs` → **SSL/TLS** → **Custom Hostnames**
+- 设置 Fallback Origin 为：`origin.minishort.sbs`
+- 在 DNS 添加 `origin` CNAME 指向 `lp-admin-worker.ceddnabby.workers.dev`（或 Worker 自定义域）
+
+### 4. 客户域名 CNAME
+- 客户域名 CNAME 到：`customers.minishort.sbs`
+- 在 DNS 添加 `customers` 记录指向 Cloudflare for SaaS 提供的目标
+
+### 5. 后台添加域名
+- 在 LP Admin → 域名管理 → 添加客户域名
+- 系统自动调用 Custom Hostnames API 签发 SSL
+
 
 ## 数据统计口径
 
