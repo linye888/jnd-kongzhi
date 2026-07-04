@@ -1,15 +1,10 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useAuth } from "../lib/auth";
-import SetupBanner from "./SetupBanner";
 
 const links = [
   { to: "/", label: "Dashboard" },
-  { to: "/stats", label: "数据统计" },
   { to: "/domains", label: "域名管理" },
-  { to: "/landing-pages", label: "落地页管理" },
-  { to: "/customers", label: "客户管理" },
-  { to: "/products", label: "产品管理" },
-  { to: "/users", label: "用户管理" },
+  { to: "/stats", label: "数据统计" },
 ];
 
 export default function Layout() {
@@ -35,7 +30,6 @@ export default function Layout() {
           </div>
           <button className="btn btn-secondary" onClick={logout}>退出登录</button>
         </div>
-        <SetupBanner />
         <Outlet />
       </main>
     </div>

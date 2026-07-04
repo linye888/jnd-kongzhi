@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { api, defaultRange, formatRate } from "../lib/api";
 
-type GroupBy = "domain" | "customer" | "product" | "landing_page";
-
 interface Overview {
   totals: {
     pageViews: number;
@@ -34,12 +32,11 @@ export default function StatsPage() {
   const initial = defaultRange(7);
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
-  const [groupBy, setGroupBy] = useState<GroupBy>("domain");
   const [data, setData] = useState<Overview | null>(null);
 
   useEffect(() => {
-    api<Overview>(`/api/admin/stats/overview?from=${from}&to=${to}&groupBy=${groupBy}`).then(setData).catch(console.error);
-  }, [from, to, groupBy]);
+    api<Overview>(`/api/admin/stats/overview?from=${from}&to=${to}&groupBy=domain`).then(setData).catch(console.error);
+  }, [from, to]);
 
   const totals = data?.totals;
 
@@ -50,12 +47,6 @@ export default function StatsPage() {
       <div className="filters">
         <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
         <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-        <select value={groupBy} onChange={(e) => setGroupBy(e.target.value as GroupBy)}>
-          <option value="domain">按域名</option>
-          <option value="customer">按客户</option>
-          <option value="product">按产品</option>
-          <option value="landing_page">按落地页</option>
-        </select>
       </div>
 
       <div className="card-grid">
@@ -82,7 +73,7 @@ export default function StatsPage() {
           </thead>
           <tbody>
             {(data?.items ?? []).map((item) => (
-              <tr key={`${groupBy}-${item.id}`}>
+              <tr key={item.id}>
                 <td>{item.name}</td>
                 <td>{item.domainCount ?? "-"}</td>
                 <td>{item.pageViews}</td>

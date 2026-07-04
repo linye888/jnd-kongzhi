@@ -6,11 +6,6 @@ import DashboardPage from "./pages/DashboardPage";
 import StatsPage from "./pages/StatsPage";
 import DomainsPage from "./pages/DomainsPage";
 import DomainDetailPage from "./pages/DomainDetailPage";
-import LandingPagesPage from "./pages/LandingPagesPage";
-import LandingPageEditPage from "./pages/LandingPageEditPage";
-import CustomersPage from "./pages/CustomersPage";
-import ProductsPage from "./pages/ProductsPage";
-import UsersPage from "./pages/UsersPage";
 
 function Protected({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -36,12 +31,7 @@ export default function App() {
           <Route path="stats" element={<StatsPage />} />
           <Route path="domains/:id" element={<DomainDetailPage />} />
           <Route path="domains" element={<DomainsPage />} />
-          <Route path="landing-pages/new" element={<LandingPageEditPage />} />
-          <Route path="landing-pages/:id/edit" element={<LandingPageEditPage />} />
-          <Route path="landing-pages" element={<LandingPagesPage />} />
-          <Route path="customers" element={<CustomersPage />} />
-          <Route path="products" element={<ProductsPage />} />
-          <Route path="users" element={<UsersPage />} />
+          <Route path="*" element={<Navigate to="/domains" replace />} />
         </Route>
       </Routes>
     </AuthProvider>

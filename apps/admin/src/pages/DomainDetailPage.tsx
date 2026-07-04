@@ -1,20 +1,15 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { DomainSetupGuide, DomainStatsDaily, DownloadByPosition } from "@lp-admin/shared";
-import DomainSetupGuidePanel from "../components/DomainSetupGuide";
 import { api, defaultRange, formatRate } from "../lib/api";
-import { dnsTargetLabel, getDomainKind } from "../lib/domain-kind";
 
 interface DomainInfo {
   id: number;
   hostname: string;
-  customerName: string;
-  productName: string;
-  landingPageName: string;
+  downloadUrl: string;
+  pixelId: string;
   status: string;
   sslStatus: string;
-  cfCustomHostnameId: string | null;
-  cnameTarget: string;
   setup?: DomainSetupGuide;
 }
 
@@ -22,6 +17,7 @@ interface DomainStatsResponse {
   summary: {
     pageViews: number;
     uniqueVisitors: number;
+    botPageViews?: number;
     downloadCount: number;
     uniqueDownloaders: number;
     conversionRate: number;
@@ -43,7 +39,6 @@ export default function DomainDetailPage() {
   const [to, setTo] = useState(initial.to);
   const [domain, setDomain] = useState<DomainInfo | null>(null);
   const [stats, setStats] = useState<DomainStatsResponse | null>(null);
-  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -58,31 +53,6 @@ export default function DomainDetailPage() {
       .catch((e) => setError(String(e)));
   }, [id, from, to]);
 
-  async function refreshSsl() {
-    if (!id) return;
-    setError("");
-    try {
-      const row = await api<{ sslStatus: string }>(`/api/admin/domains/${id}/refresh-ssl`, { method: "POST" });
-      setMessage(`SSL 状态已更新：${row.sslStatus}`);
-      const info = await api<DomainInfo>(`/api/admin/domains/${id}`);
-      setDomain(info);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "刷新失败");
-    }
-  }
-
-  async function bindWorker() {
-    if (!id) return;
-    setError("");
-    try {
-      const row = await api<DomainInfo & { message?: string }>(`/api/admin/domains/${id}/bind-worker`, { method: "POST" });
-      setDomain(row);
-      setMessage(row.message ?? "Worker 已绑定");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "绑定失败");
-    }
-  }
-
   const summary = stats?.summary;
   const maxPv = Math.max(...(stats?.daily.map((d) => d.pageViews) ?? [1]), 1);
   const maxDownloads = Math.max(...(stats?.daily.map((d) => d.downloadCount) ?? [1]), 1);
@@ -95,38 +65,24 @@ export default function DomainDetailPage() {
           <Link className="muted" to="/domains">← 返回域名列表</Link>
           <h1 style={{ margin: "8px 0 0" }}>{domain?.hostname ?? "域名详情"}</h1>
           {domain ? (
-            <p className="muted" style={{ margin: "6px 0 0" }}>
-              {domain.customerName} / {domain.productName} · {domain.landingPageName}
+            <p className="muted" style={{ margin: "6px 0 0", wordBreak: "break-all" }}>
+              下载链接：{domain.downloadUrl} · Pixel：{domain.pixelId}
             </p>
           ) : null}
         </div>
-        <div className="actions">
-          {domain && getDomainKind(domain.hostname) === "platform_subdomain" ? (
-            <button className="btn btn-secondary" onClick={bindWorker}>重新绑定 Worker</button>
-          ) : (
-            <button className="btn btn-secondary" onClick={refreshSsl}>查看 SSL 说明</button>
-          )}
-          {domain ? (
-            <a className="btn btn-secondary" href={`https://${domain.hostname}`} target="_blank" rel="noreferrer">访问落地页</a>
-          ) : null}
-        </div>
+        {domain ? (
+          <a className="btn btn-secondary" href={`https://${domain.hostname}`} target="_blank" rel="noreferrer">
+            访问落地页
+          </a>
+        ) : null}
       </div>
 
-      {message ? <div className="notice" style={{ marginBottom: 12 }}>{message}</div> : null}
       {error ? <div className="error" style={{ marginBottom: 12 }}>{error}</div> : null}
-
-      {domain?.setup ? (
-        <div className="panel" style={{ marginBottom: 16 }}>
-          <h2>域名配置指引</h2>
-          <DomainSetupGuidePanel guide={domain.setup} />
-        </div>
-      ) : null}
 
       {domain ? (
         <div className="card-grid" style={{ marginBottom: 16 }}>
           <div className="card"><div className="label">状态</div><div className="value" style={{ fontSize: 18 }}>{domain.status}</div></div>
           <div className="card"><div className="label">SSL</div><div className="value" style={{ fontSize: 18 }}><span className={`badge ${domain.sslStatus}`}>{domain.sslStatus}</span></div></div>
-          <div className="card"><div className="label">DNS 目标</div><div className="value" style={{ fontSize: 16 }}><code>{dnsTargetLabel(domain.hostname, domain.setup?.originTarget)}</code></div></div>
         </div>
       ) : null}
 
