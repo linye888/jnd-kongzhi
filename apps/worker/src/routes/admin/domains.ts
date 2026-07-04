@@ -55,7 +55,29 @@ app.get("/", async (c) => {
 app.get("/:id", async (c) => {
   const id = Number(c.req.param("id"));
   const db = getDb(c.env);
-  const [row] = await db.select().from(domains).where(eq(domains.id, id)).limit(1);
+  const [row] = await db
+    .select({
+      id: domains.id,
+      hostname: domains.hostname,
+      customerId: domains.customerId,
+      productId: domains.productId,
+      landingPageId: domains.landingPageId,
+      status: domains.status,
+      sslStatus: domains.sslStatus,
+      cfCustomHostnameId: domains.cfCustomHostnameId,
+      cnameTarget: domains.cnameTarget,
+      createdAt: domains.createdAt,
+      updatedAt: domains.updatedAt,
+      customerName: customers.name,
+      productName: products.name,
+      landingPageName: landingPages.name,
+    })
+    .from(domains)
+    .leftJoin(customers, eq(domains.customerId, customers.id))
+    .leftJoin(products, eq(domains.productId, products.id))
+    .leftJoin(landingPages, eq(domains.landingPageId, landingPages.id))
+    .where(eq(domains.id, id))
+    .limit(1);
   if (!row) return errorResponse("Not found", 404);
   return jsonResponse({ ...row, cnameTarget: row.cnameTarget ?? c.env.CNAME_TARGET });
 });
@@ -74,14 +96,14 @@ app.post("/", async (c) => {
       productId: body.productId,
       landingPageId: body.landingPageId,
       status: "active",
-      sslStatus: mapSslStatus(cf?.ssl.status),
-      cfCustomHostnameId: cf?.id ?? null,
+      sslStatus: mapSslStatus(cf.result?.ssl.status),
+      cfCustomHostnameId: cf.result?.id ?? null,
       cnameTarget: c.env.CNAME_TARGET,
       createdAt: ts,
       updatedAt: ts,
     })
     .returning();
-  return jsonResponse(row, 201);
+  return jsonResponse({ ...row, cfWarning: cf.warning ?? null }, 201);
 });
 
 app.put("/:id", async (c) => {
@@ -110,7 +132,7 @@ app.post("/import", async (c) => {
   const body = await c.req.json<{ rows: Array<{ hostname: string; customerId: number; productId: number; landingPageId: number }> }>();
   const db = getDb(c.env);
   const ts = nowIso();
-  const result: DomainImportResult = { success: 0, failed: [] };
+  const result: DomainImportResult = { success: 0, failed: [], warnings: [] };
 
   for (let i = 0; i < body.rows.length; i++) {
     const item = body.rows[i];
@@ -123,13 +145,17 @@ app.post("/import", async (c) => {
         productId: item.productId,
         landingPageId: item.landingPageId,
         status: "active",
-        sslStatus: mapSslStatus(cf?.ssl.status),
-        cfCustomHostnameId: cf?.id ?? null,
+        sslStatus: mapSslStatus(cf.result?.ssl.status),
+        cfCustomHostnameId: cf.result?.id ?? null,
         cnameTarget: c.env.CNAME_TARGET,
         createdAt: ts,
         updatedAt: ts,
       });
       result.success += 1;
+      if (cf.warning) {
+        if (!result.warnings) result.warnings = [];
+        result.warnings.push({ hostname, message: cf.warning });
+      }
     } catch (error) {
       result.failed.push({ row: i + 1, hostname: item.hostname, error: error instanceof Error ? error.message : "Unknown error" });
     }
@@ -147,6 +173,28 @@ app.post("/:id/refresh-ssl", async (c) => {
   const status = await getCustomHostnameStatus(c.env, row.cfCustomHostnameId);
   const sslStatus = mapSslStatus(status);
   const [updated] = await db.update(domains).set({ sslStatus, updatedAt: nowIso() }).where(eq(domains.id, id)).returning();
+  return jsonResponse(updated);
+});
+
+app.post("/:id/provision-ssl", async (c) => {
+  const id = Number(c.req.param("id"));
+  const db = getDb(c.env);
+  const [row] = await db.select().from(domains).where(eq(domains.id, id)).limit(1);
+  if (!row) return errorResponse("Not found", 404);
+  if (row.cfCustomHostnameId) return errorResponse("Custom Hostname already exists", 400);
+
+  const cf = await createCustomHostname(c.env, row.hostname);
+  if (!cf.result) return errorResponse(cf.warning ?? "Failed to create Custom Hostname", 400);
+
+  const [updated] = await db
+    .update(domains)
+    .set({
+      cfCustomHostnameId: cf.result.id,
+      sslStatus: mapSslStatus(cf.result.ssl.status),
+      updatedAt: nowIso(),
+    })
+    .where(eq(domains.id, id))
+    .returning();
   return jsonResponse(updated);
 });
 

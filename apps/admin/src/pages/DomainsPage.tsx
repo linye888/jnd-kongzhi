@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { api, formatRate } from "../lib/api";
 
 interface DomainRow {
@@ -51,7 +52,7 @@ export default function DomainsPage() {
     setError("");
     setMessage("");
     try {
-      const row = await api<DomainRow>("/api/admin/domains", {
+      const row = await api<DomainRow & { cfWarning?: string | null }>("/api/admin/domains", {
         method: "POST",
         body: JSON.stringify({
           hostname: form.hostname,
@@ -61,8 +62,10 @@ export default function DomainsPage() {
         }),
       });
       setForm({ hostname: "", customerId: "", productId: "", landingPageId: "" });
-      if (!row.cfCustomHostnameId) {
-        setMessage(`域名 ${row.hostname} 已添加，但 Cloudflare SSL 未自动创建（for SaaS 可能未开通）`);
+      if (row.cfWarning) {
+        setMessage(`域名 ${row.hostname} 已添加。${row.cfWarning}`);
+      } else if (!row.cfCustomHostnameId) {
+        setMessage(`域名 ${row.hostname} 已添加，但 Cloudflare SSL 未自动创建`);
       } else {
         setMessage(`域名 ${row.hostname} 已添加，SSL 状态：${row.sslStatus}`);
       }
@@ -81,12 +84,13 @@ export default function DomainsPage() {
         const [hostname, customerId, productId, landingPageId] = line.split(",").map((v) => v.trim());
         return { hostname, customerId: Number(customerId), productId: Number(productId), landingPageId: Number(landingPageId) };
       });
-      const result = await api<{ success: number; failed: Array<{ row: number; hostname: string; error: string }> }>(
+      const result = await api<{ success: number; failed: Array<{ row: number; hostname: string; error: string }>; warnings?: Array<{ hostname: string; message: string }> }>(
         "/api/admin/domains/import",
         { method: "POST", body: JSON.stringify({ rows: parsed }) },
       );
       setCsv("");
-      setMessage(`导入完成：成功 ${result.success} 条${result.failed.length ? `，失败 ${result.failed.length} 条` : ""}`);
+      const warnCount = result.warnings?.length ?? 0;
+      setMessage(`导入完成：成功 ${result.success} 条${result.failed.length ? `，失败 ${result.failed.length} 条` : ""}${warnCount ? `，SSL 警告 ${warnCount} 条` : ""}`);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "导入失败");
@@ -165,7 +169,7 @@ export default function DomainsPage() {
           <tbody>
             {rows.map((row) => (
               <tr key={row.id}>
-                <td>{row.hostname}</td>
+                <td><Link className="link" to={`/domains/${row.id}`}>{row.hostname}</Link></td>
                 <td>{row.customerName} / {row.productName}</td>
                 <td>
                   <select
@@ -191,6 +195,7 @@ export default function DomainsPage() {
                 <td>{row.todayStats.downloadCount}</td>
                 <td>{formatRate(row.todayStats.conversionRate)}</td>
                 <td className="actions">
+                  <Link className="btn btn-secondary" to={`/domains/${row.id}`}>详情</Link>
                   <button
                     className="btn btn-secondary"
                     disabled={!row.cfCustomHostnameId}

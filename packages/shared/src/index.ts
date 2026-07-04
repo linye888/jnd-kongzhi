@@ -169,6 +169,7 @@ export interface DomainImportRow {
 export interface DomainImportResult {
   success: number;
   failed: Array<{ row: number; hostname: string; error: string }>;
+  warnings?: Array<{ hostname: string; message: string }>;
 }
 
 export interface AuditLog {
