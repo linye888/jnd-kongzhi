@@ -109,12 +109,14 @@ export const events = sqliteTable(
     buttonPosition: text("button_position"),
     country: text("country"),
     referrer: text("referrer"),
+    isBot: integer("is_bot").notNull().default(0),
     createdAt: text("created_at").notNull(),
   },
   (table) => [
     index("events_domain_created_idx").on(table.domainId, table.createdAt),
     index("events_type_created_idx").on(table.eventType, table.createdAt),
     index("events_visitor_idx").on(table.visitorId, table.createdAt),
+    index("events_is_bot_created_idx").on(table.isBot, table.createdAt),
   ],
 );
 
@@ -128,6 +130,10 @@ export const domainStatsDaily = sqliteTable(
     uniqueVisitors: integer("unique_visitors").notNull().default(0),
     downloadCount: integer("download_count").notNull().default(0),
     uniqueDownloaders: integer("unique_downloaders").notNull().default(0),
+    humanPageViews: integer("human_page_views").notNull().default(0),
+    botPageViews: integer("bot_page_views").notNull().default(0),
+    humanUniqueVisitors: integer("human_unique_visitors").notNull().default(0),
+    botUniqueVisitors: integer("bot_unique_visitors").notNull().default(0),
   },
   (table) => [uniqueIndex("domain_stats_daily_unique").on(table.domainId, table.statDate)],
 );

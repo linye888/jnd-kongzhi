@@ -5,83 +5,221 @@ import type { Env } from "../env";
 import { calcRate, getDb, todayUtc } from "./utils";
 
 function emptySummary(): DomainStatsSummary {
-  return { pageViews: 0, uniqueVisitors: 0, downloadCount: 0, uniqueDownloaders: 0, conversionRate: 0 };
+  return {
+    pageViews: 0,
+    uniqueVisitors: 0,
+    botPageViews: 0,
+    botUniqueVisitors: 0,
+    downloadCount: 0,
+    uniqueDownloaders: 0,
+    conversionRate: 0,
+  };
+}
+
+function eventWindow(from: string, to: string) {
+  return { start: `${from}T00:00:00.000Z`, end: `${to}T23:59:59.999Z` };
+}
+
+async function countDistinctVisitors(
+  db: ReturnType<typeof getDb>,
+  domainIds: number[],
+  start: string,
+  end: string,
+  isBot: 0 | 1,
+) {
+  const [row] = await db
+    .select({ count: sql<number>`count(distinct ${events.visitorId})` })
+    .from(events)
+    .where(
+      and(
+        inArray(events.domainId, domainIds),
+        eq(events.eventType, "page_view"),
+        eq(events.isBot, isBot),
+        gte(events.createdAt, start),
+        lte(events.createdAt, end),
+      ),
+    );
+  return Number(row?.count ?? 0);
+}
+
+async function countDistinctVisitorsByDomain(
+  db: ReturnType<typeof getDb>,
+  domainIds: number[],
+  start: string,
+  end: string,
+  isBot: 0 | 1,
+) {
+  const rows = await db
+    .select({ domainId: events.domainId, count: sql<number>`count(distinct ${events.visitorId})` })
+    .from(events)
+    .where(
+      and(
+        inArray(events.domainId, domainIds),
+        eq(events.eventType, "page_view"),
+        eq(events.isBot, isBot),
+        gte(events.createdAt, start),
+        lte(events.createdAt, end),
+      ),
+    )
+    .groupBy(events.domainId);
+
+  const map = new Map<number, number>();
+  for (const id of domainIds) map.set(id, 0);
+  for (const row of rows) map.set(row.domainId, Number(row.count));
+  return map;
 }
 
 export async function aggregateDomainDay(env: Env, domainId: number, statDate: string) {
   const db = getDb(env);
   const start = `${statDate}T00:00:00.000Z`;
   const end = `${statDate}T23:59:59.999Z`;
+  const base = and(eq(events.domainId, domainId), gte(events.createdAt, start), lte(events.createdAt, end));
 
-  const [pv] = await db
+  const [humanPv] = await db
     .select({ count: sql<number>`count(*)` })
     .from(events)
-    .where(and(eq(events.domainId, domainId), eq(events.eventType, "page_view"), gte(events.createdAt, start), lte(events.createdAt, end)));
-
-  const [uv] = await db
+    .where(and(base, eq(events.eventType, "page_view"), eq(events.isBot, 0)));
+  const [botPv] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(events)
+    .where(and(base, eq(events.eventType, "page_view"), eq(events.isBot, 1)));
+  const [humanUv] = await db
     .select({ count: sql<number>`count(distinct ${events.visitorId})` })
     .from(events)
-    .where(and(eq(events.domainId, domainId), eq(events.eventType, "page_view"), gte(events.createdAt, start), lte(events.createdAt, end)));
-
+    .where(and(base, eq(events.eventType, "page_view"), eq(events.isBot, 0)));
+  const [botUv] = await db
+    .select({ count: sql<number>`count(distinct ${events.visitorId})` })
+    .from(events)
+    .where(and(base, eq(events.eventType, "page_view"), eq(events.isBot, 1)));
   const [downloads] = await db
     .select({ count: sql<number>`count(*)` })
     .from(events)
-    .where(and(eq(events.domainId, domainId), eq(events.eventType, "download_click"), gte(events.createdAt, start), lte(events.createdAt, end)));
-
+    .where(and(base, eq(events.eventType, "download_click"), eq(events.isBot, 0)));
   const [uniqueDownloads] = await db
     .select({ count: sql<number>`count(distinct ${events.visitorId})` })
     .from(events)
-    .where(and(eq(events.domainId, domainId), eq(events.eventType, "download_click"), gte(events.createdAt, start), lte(events.createdAt, end)));
+    .where(and(base, eq(events.eventType, "download_click"), eq(events.isBot, 0)));
 
-  const pageViews = Number(pv?.count ?? 0);
-  const uniqueVisitors = Number(uv?.count ?? 0);
+  const humanPageViews = Number(humanPv?.count ?? 0);
+  const botPageViews = Number(botPv?.count ?? 0);
+  const humanUniqueVisitors = Number(humanUv?.count ?? 0);
+  const botUniqueVisitors = Number(botUv?.count ?? 0);
   const downloadCount = Number(downloads?.count ?? 0);
   const uniqueDownloaders = Number(uniqueDownloads?.count ?? 0);
 
   await db
     .insert(domainStatsDaily)
-    .values({ domainId, statDate, pageViews, uniqueVisitors, downloadCount, uniqueDownloaders })
+    .values({
+      domainId,
+      statDate,
+      pageViews: humanPageViews,
+      uniqueVisitors: humanUniqueVisitors,
+      downloadCount,
+      uniqueDownloaders,
+      humanPageViews,
+      botPageViews,
+      humanUniqueVisitors,
+      botUniqueVisitors,
+    })
     .onConflictDoUpdate({
       target: [domainStatsDaily.domainId, domainStatsDaily.statDate],
-      set: { pageViews, uniqueVisitors, downloadCount, uniqueDownloaders },
+      set: {
+        pageViews: humanPageViews,
+        uniqueVisitors: humanUniqueVisitors,
+        downloadCount,
+        uniqueDownloaders,
+        humanPageViews,
+        botPageViews,
+        humanUniqueVisitors,
+        botUniqueVisitors,
+      },
     });
 }
 
 export async function getDomainStats(env: Env, domainId: number, from: string, to: string) {
   const db = getDb(env);
+  const { start, end } = eventWindow(from, to);
   const rows = await db
     .select()
     .from(domainStatsDaily)
     .where(and(eq(domainStatsDaily.domainId, domainId), gte(domainStatsDaily.statDate, from), lte(domainStatsDaily.statDate, to)))
     .orderBy(domainStatsDaily.statDate);
 
-  const summary = rows.reduce(
-    (acc, row) => ({
-      pageViews: acc.pageViews + row.pageViews,
-      uniqueVisitors: acc.uniqueVisitors + row.uniqueVisitors,
-      downloadCount: acc.downloadCount + row.downloadCount,
-      uniqueDownloaders: acc.uniqueDownloaders + row.uniqueDownloaders,
-      conversionRate: 0,
-    }),
-    emptySummary(),
-  );
+  const pageViews = rows.reduce((acc, row) => acc + (row.humanPageViews ?? row.pageViews), 0);
+  const botPageViews = rows.reduce((acc, row) => acc + (row.botPageViews ?? 0), 0);
+  const downloadCount = rows.reduce((acc, row) => acc + row.downloadCount, 0);
+
+  const [humanUv] = await db
+    .select({ count: sql<number>`count(distinct ${events.visitorId})` })
+    .from(events)
+    .where(
+      and(
+        eq(events.domainId, domainId),
+        eq(events.eventType, "page_view"),
+        eq(events.isBot, 0),
+        gte(events.createdAt, start),
+        lte(events.createdAt, end),
+      ),
+    );
+  const [botUv] = await db
+    .select({ count: sql<number>`count(distinct ${events.visitorId})` })
+    .from(events)
+    .where(
+      and(
+        eq(events.domainId, domainId),
+        eq(events.eventType, "page_view"),
+        eq(events.isBot, 1),
+        gte(events.createdAt, start),
+        lte(events.createdAt, end),
+      ),
+    );
+  const [uniqueDownloadersRow] = await db
+    .select({ count: sql<number>`count(distinct ${events.visitorId})` })
+    .from(events)
+    .where(
+      and(
+        eq(events.domainId, domainId),
+        eq(events.eventType, "download_click"),
+        eq(events.isBot, 0),
+        gte(events.createdAt, start),
+        lte(events.createdAt, end),
+      ),
+    );
+
+  const summary: DomainStatsSummary = {
+    pageViews,
+    uniqueVisitors: Number(humanUv?.count ?? 0),
+    botPageViews,
+    botUniqueVisitors: Number(botUv?.count ?? 0),
+    downloadCount,
+    uniqueDownloaders: Number(uniqueDownloadersRow?.count ?? 0),
+    conversionRate: 0,
+  };
   summary.conversionRate = calcRate(summary.uniqueDownloaders, summary.uniqueVisitors);
 
   const daily: DomainStatsDaily[] = rows.map((row) => ({
     date: row.statDate,
-    pageViews: row.pageViews,
-    uniqueVisitors: row.uniqueVisitors,
+    pageViews: row.humanPageViews ?? row.pageViews,
+    uniqueVisitors: row.humanUniqueVisitors ?? row.uniqueVisitors,
+    botPageViews: row.botPageViews ?? 0,
+    botUniqueVisitors: row.botUniqueVisitors ?? 0,
     downloadCount: row.downloadCount,
     uniqueDownloaders: row.uniqueDownloaders,
-    conversionRate: calcRate(row.uniqueDownloaders, row.uniqueVisitors),
+    conversionRate: calcRate(row.uniqueDownloaders, row.humanUniqueVisitors ?? row.uniqueVisitors),
   }));
 
-  const start = `${from}T00:00:00.000Z`;
-  const end = `${to}T23:59:59.999Z`;
   const positions = await db
     .select({ buttonPosition: events.buttonPosition, count: sql<number>`count(*)` })
     .from(events)
-    .where(and(eq(events.domainId, domainId), eq(events.eventType, "download_click"), gte(events.createdAt, start), lte(events.createdAt, end)))
+    .where(
+      and(
+        eq(events.domainId, domainId),
+        eq(events.eventType, "download_click"),
+        eq(events.isBot, 0),
+        gte(events.createdAt, start),
+        lte(events.createdAt, end),
+      ),
+    )
     .groupBy(events.buttonPosition);
 
   const downloadByPosition: DownloadByPosition = { hero: 0, footer: 0, drama_modal: 0 };
@@ -101,8 +239,7 @@ export async function getOverviewStats(
   filters?: { customerId?: number; productId?: number },
 ) {
   const db = getDb(env);
-  let domainQuery = db.select().from(domains);
-  const allDomains = await domainQuery;
+  const allDomains = await db.select().from(domains);
   const filteredDomains = allDomains.filter((d) => {
     if (filters?.customerId && d.customerId !== filters.customerId) return false;
     if (filters?.productId && d.productId !== filters.productId) return false;
@@ -117,12 +254,14 @@ export async function getOverviewStats(
         uniqueVisitorsDeduped: 0,
         uniqueDownloadersSum: 0,
         uniqueDownloadersDeduped: 0,
+        botUniqueVisitorsDeduped: 0,
         activeDomains: 0,
       } satisfies StatsOverviewTotals,
       items: [] as StatsGroupItem[],
     };
   }
 
+  const { start, end } = eventWindow(from, to);
   const statsRows = await db
     .select()
     .from(domainStatsDaily)
@@ -132,48 +271,57 @@ export async function getOverviewStats(
   for (const id of domainIds) byDomain.set(id, emptySummary());
   for (const row of statsRows) {
     const current = byDomain.get(row.domainId) ?? emptySummary();
-    current.pageViews += row.pageViews;
-    current.uniqueVisitors += row.uniqueVisitors;
+    current.pageViews += row.humanPageViews ?? row.pageViews;
+    current.botPageViews += row.botPageViews ?? 0;
     current.downloadCount += row.downloadCount;
     current.uniqueDownloaders += row.uniqueDownloaders;
     byDomain.set(row.domainId, current);
   }
 
-  const start = `${from}T00:00:00.000Z`;
-  const end = `${to}T23:59:59.999Z`;
-  const [dedupUv] = await db
-    .select({ count: sql<number>`count(distinct ${events.visitorId})` })
-    .from(events)
-    .where(and(inArray(events.domainId, domainIds), eq(events.eventType, "page_view"), gte(events.createdAt, start), lte(events.createdAt, end)));
+  const humanUvByDomain = await countDistinctVisitorsByDomain(db, domainIds, start, end, 0);
+  const botUvByDomain = await countDistinctVisitorsByDomain(db, domainIds, start, end, 1);
+  for (const id of domainIds) {
+    const current = byDomain.get(id) ?? emptySummary();
+    current.uniqueVisitors = humanUvByDomain.get(id) ?? 0;
+    current.botUniqueVisitors = botUvByDomain.get(id) ?? 0;
+    byDomain.set(id, current);
+  }
+
+  const uniqueVisitorsDeduped = await countDistinctVisitors(db, domainIds, start, end, 0);
+  const botUniqueVisitorsDeduped = await countDistinctVisitors(db, domainIds, start, end, 1);
+
   const [dedupDownloaders] = await db
     .select({ count: sql<number>`count(distinct ${events.visitorId})` })
     .from(events)
-    .where(and(inArray(events.domainId, domainIds), eq(events.eventType, "download_click"), gte(events.createdAt, start), lte(events.createdAt, end)));
+    .where(
+      and(
+        inArray(events.domainId, domainIds),
+        eq(events.eventType, "download_click"),
+        eq(events.isBot, 0),
+        gte(events.createdAt, start),
+        lte(events.createdAt, end),
+      ),
+    );
 
-  const totals = Array.from(byDomain.values()).reduce(
-    (acc, item) => ({
-      pageViews: acc.pageViews + item.pageViews,
-      uniqueVisitors: acc.uniqueVisitors + item.uniqueVisitors,
-      downloadCount: acc.downloadCount + item.downloadCount,
-      uniqueDownloaders: acc.uniqueDownloaders + item.uniqueDownloaders,
-      conversionRate: 0,
-      uniqueVisitorsSum: acc.uniqueVisitorsSum + item.uniqueVisitors,
-      uniqueDownloadersSum: acc.uniqueDownloadersSum + item.uniqueDownloaders,
-      uniqueVisitorsDeduped: Number(dedupUv?.count ?? 0),
-      uniqueDownloadersDeduped: Number(dedupDownloaders?.count ?? 0),
-      activeDomains: acc.activeDomains,
-    }),
-    {
-      ...emptySummary(),
-      uniqueVisitorsSum: 0,
-      uniqueVisitorsDeduped: 0,
-      uniqueDownloadersSum: 0,
-      uniqueDownloadersDeduped: 0,
-      activeDomains: 0,
-    } as StatsOverviewTotals,
-  );
-  totals.conversionRate = calcRate(totals.uniqueDownloadersSum, totals.uniqueVisitorsSum);
-  totals.activeDomains = Array.from(byDomain.values()).filter((s) => s.pageViews > 0).length;
+  const domainSummaries = Array.from(byDomain.values());
+  const uniqueVisitorsSum = domainSummaries.reduce((acc, item) => acc + item.uniqueVisitors, 0);
+  const uniqueDownloadersSum = domainSummaries.reduce((acc, item) => acc + item.uniqueDownloaders, 0);
+
+  const totals: StatsOverviewTotals = {
+    pageViews: domainSummaries.reduce((acc, item) => acc + item.pageViews, 0),
+    uniqueVisitors: uniqueVisitorsSum,
+    botPageViews: domainSummaries.reduce((acc, item) => acc + item.botPageViews, 0),
+    botUniqueVisitors: botUniqueVisitorsDeduped,
+    downloadCount: domainSummaries.reduce((acc, item) => acc + item.downloadCount, 0),
+    uniqueDownloaders: uniqueDownloadersSum,
+    conversionRate: calcRate(uniqueDownloadersSum, uniqueVisitorsSum),
+    uniqueVisitorsSum,
+    uniqueVisitorsDeduped,
+    uniqueDownloadersSum,
+    uniqueDownloadersDeduped: Number(dedupDownloaders?.count ?? 0),
+    botUniqueVisitorsDeduped,
+    activeDomains: domainSummaries.filter((s) => s.pageViews > 0 || s.botPageViews > 0).length,
+  };
 
   const items = await buildGroupItems(env, filteredDomains, byDomain, groupBy);
   return { totals, items };
@@ -224,6 +372,8 @@ async function buildGroupItems(
       name,
       pageViews: 0,
       uniqueVisitors: 0,
+      botPageViews: 0,
+      botUniqueVisitors: 0,
       downloadCount: 0,
       uniqueDownloaders: 0,
       conversionRate: 0,
@@ -232,6 +382,8 @@ async function buildGroupItems(
     };
     existing.pageViews += stats.pageViews;
     existing.uniqueVisitors += stats.uniqueVisitors;
+    existing.botPageViews += stats.botPageViews;
+    existing.botUniqueVisitors += stats.botUniqueVisitors;
     existing.downloadCount += stats.downloadCount;
     existing.uniqueDownloaders += stats.uniqueDownloaders;
     existing.domainIds.add(domain.id);
@@ -245,12 +397,14 @@ async function buildGroupItems(
       name: item.name,
       pageViews: item.pageViews,
       uniqueVisitors: item.uniqueVisitors,
+      botPageViews: item.botPageViews,
+      botUniqueVisitors: item.botUniqueVisitors,
       downloadCount: item.downloadCount,
       uniqueDownloaders: item.uniqueDownloaders,
       conversionRate: calcRate(item.uniqueDownloaders, item.uniqueVisitors),
       domainCount: item.domainCount,
     }))
-    .sort((a, b) => b.downloadCount - a.downloadCount);
+    .sort((a, b) => b.downloadCount - a.downloadCount || b.pageViews - a.pageViews);
 }
 
 export async function refreshTodayAggregates(env: Env) {
@@ -271,11 +425,13 @@ export async function getTodaySummaryForDomains(env: Env, domainIds: number[]) {
   const map = new Map<number, DomainStatsSummary>();
   for (const row of rows) {
     map.set(row.domainId, {
-      pageViews: row.pageViews,
-      uniqueVisitors: row.uniqueVisitors,
+      pageViews: row.humanPageViews ?? row.pageViews,
+      uniqueVisitors: row.humanUniqueVisitors ?? row.uniqueVisitors,
+      botPageViews: row.botPageViews ?? 0,
+      botUniqueVisitors: row.botUniqueVisitors ?? 0,
       downloadCount: row.downloadCount,
       uniqueDownloaders: row.uniqueDownloaders,
-      conversionRate: calcRate(row.uniqueDownloaders, row.uniqueVisitors),
+      conversionRate: calcRate(row.uniqueDownloaders, row.humanUniqueVisitors ?? row.uniqueVisitors),
     });
   }
   return map;

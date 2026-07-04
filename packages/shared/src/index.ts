@@ -107,6 +107,8 @@ export interface User {
 export interface DomainStatsSummary {
   pageViews: number;
   uniqueVisitors: number;
+  botPageViews: number;
+  botUniqueVisitors: number;
   downloadCount: number;
   uniqueDownloaders: number;
   conversionRate: number;
@@ -121,6 +123,7 @@ export interface StatsOverviewTotals extends DomainStatsSummary {
   uniqueVisitorsDeduped: number;
   uniqueDownloadersSum: number;
   uniqueDownloadersDeduped: number;
+  botUniqueVisitorsDeduped: number;
   activeDomains: number;
 }
 

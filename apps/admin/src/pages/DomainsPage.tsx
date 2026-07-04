@@ -15,7 +15,7 @@ interface DomainRow {
   sslStatus: string;
   cfCustomHostnameId: string | null;
   cnameTarget: string;
-  todayStats: { pageViews: number; uniqueVisitors: number; downloadCount: number; uniqueDownloaders: number; conversionRate: number };
+  todayStats: { pageViews: number; uniqueVisitors: number; botPageViews: number; downloadCount: number; uniqueDownloaders: number; conversionRate: number };
 }
 
 interface Customer { id: number; name: string }
@@ -161,6 +161,7 @@ export default function DomainsPage() {
               <th>CNAME</th>
               <th>今日 PV</th>
               <th>今日 UV</th>
+              <th>疑似机器人</th>
               <th>今日下载</th>
               <th>转化率</th>
               <th>操作</th>
@@ -192,6 +193,7 @@ export default function DomainsPage() {
                 <td><code>{row.cnameTarget}</code></td>
                 <td>{row.todayStats.pageViews}</td>
                 <td>{row.todayStats.uniqueVisitors}</td>
+                <td>{row.todayStats.botPageViews ?? 0}</td>
                 <td>{row.todayStats.downloadCount}</td>
                 <td>{formatRate(row.todayStats.conversionRate)}</td>
                 <td className="actions">

@@ -3,7 +3,7 @@ import type { Env } from "../env";
 import { resolveDomain } from "../lib/domains";
 import { aggregateDomainDay } from "../lib/stats";
 import { events } from "@lp-admin/db";
-import { getDb, isBot, nowIso, VISITOR_COOKIE, VISITOR_MAX_AGE } from "../lib/utils";
+import { getDb, classifyTraffic, nowIso, VISITOR_COOKIE, VISITOR_MAX_AGE } from "../lib/utils";
 
 export async function handleLandingRequest(request: Request, env: Env, ctx: ExecutionContext): Promise<Response | null> {
   const url = new URL(request.url);
@@ -28,8 +28,9 @@ export async function handleLandingRequest(request: Request, env: Env, ctx: Exec
   const headers = new Headers({ "Content-Type": "text/html; charset=utf-8" });
   headers.append("Set-Cookie", `${VISITOR_COOKIE}=${visitorId}; Max-Age=${VISITOR_MAX_AGE}; Path=/; Secure; SameSite=Lax`);
 
+  const traffic = classifyTraffic(request);
   const userAgent = request.headers.get("User-Agent");
-  if (!isBot(userAgent)) {
+  if (!traffic.skipRecord) {
     ctx.waitUntil(
       (async () => {
         const ts = nowIso();
@@ -44,6 +45,7 @@ export async function handleLandingRequest(request: Request, env: Env, ctx: Exec
           buttonPosition: null,
           country: request.headers.get("CF-IPCountry"),
           referrer: request.headers.get("Referer"),
+          isBot: traffic.isBot ? 1 : 0,
           createdAt: ts,
         });
         await aggregateDomainDay(env, resolved.domainId, ts.slice(0, 10));

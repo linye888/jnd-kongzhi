@@ -3,14 +3,14 @@ import { events } from "@lp-admin/db";
 import type { Env } from "../env";
 import { resolveDomain } from "../lib/domains";
 import { aggregateDomainDay } from "../lib/stats";
-import { getDb, isBot, nowIso, normalizeHostname } from "../lib/utils";
+import { getDb, classifyTraffic, nowIso, normalizeHostname } from "../lib/utils";
 
 const app = new Hono<{ Bindings: Env }>();
 
 app.post("/", async (c) => {
   const hostname = normalizeHostname(new URL(c.req.url).hostname);
-  const userAgent = c.req.header("User-Agent");
-  if (isBot(userAgent ?? null)) return c.body(null, 204);
+  const traffic = classifyTraffic(c.req.raw);
+  if (traffic.skipRecord) return c.body(null, 204);
 
   const resolved = await resolveDomain(c.env, hostname);
   if (!resolved) return c.body(null, 404);
@@ -44,6 +44,7 @@ app.post("/", async (c) => {
         buttonPosition: payload.button_position ?? null,
         country: c.req.header("CF-IPCountry") ?? null,
         referrer: c.req.header("Referer") ?? null,
+        isBot: traffic.isBot ? 1 : 0,
         createdAt: ts,
       });
       await aggregateDomainDay(c.env, resolved.domainId, ts.slice(0, 10));

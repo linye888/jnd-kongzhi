@@ -126,8 +126,9 @@ export default function DomainDetailPage() {
       </div>
 
       <div className="card-grid">
-        <div className="card"><div className="label">访问次数 (PV)</div><div className="value">{summary?.pageViews ?? 0}</div></div>
-        <div className="card"><div className="label">访问用户 (UV)</div><div className="value">{summary?.uniqueVisitors ?? 0}</div></div>
+        <div className="card"><div className="label">真实访问 (PV)</div><div className="value">{summary?.pageViews ?? 0}</div></div>
+        <div className="card"><div className="label">真实用户 (UV)</div><div className="value">{summary?.uniqueVisitors ?? 0}</div></div>
+        <div className="card"><div className="label">疑似机器人 (PV)</div><div className="value">{summary?.botPageViews ?? 0}</div></div>
         <div className="card"><div className="label">下载次数</div><div className="value">{summary?.downloadCount ?? 0}</div></div>
         <div className="card"><div className="label">独立下载用户</div><div className="value">{summary?.uniqueDownloaders ?? 0}</div></div>
         <div className="card"><div className="label">转化率</div><div className="value">{formatRate(summary?.conversionRate ?? 0)}</div></div>
