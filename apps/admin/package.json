@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "build:production": "vite build --mode production",
-    "deploy": "VITE_API_BASE=https://lp-admin-worker.ceddnabby.workers.dev vite build --mode production && wrangler pages deploy dist --project-name=lp-admin --branch=main --commit-dirty=true",
+    "deploy": "vite build --mode production && wrangler pages deploy dist --project-name=lp-admin --branch=main --commit-dirty=true",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
   },

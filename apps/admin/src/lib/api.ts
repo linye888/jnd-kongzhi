@@ -19,15 +19,25 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = getToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const response = await fetch(`${API_BASE}${path}`, { ...init, headers });
+  const url = `${API_BASE}${path}`;
+  let response: Response;
+  try {
+    response = await fetch(url, { ...init, headers });
+  } catch {
+    const hint = API_BASE
+      ? `无法连接 API（${API_BASE}），请确认 Worker 自定义域可用且非 workers.dev`
+      : "未配置 VITE_API_BASE，请在构建时设置 API 地址（如 https://minishort.sbs）";
+    throw new Error(hint);
+  }
+
   let payload: { success?: boolean; data?: T; error?: string };
   try {
     payload = await response.json();
   } catch {
-    throw new Error(`无法连接 API（${response.status}），请检查网络或 VITE_API_BASE 配置`);
+    throw new Error(`API 返回异常（HTTP ${response.status}），请检查 ${API_BASE || "API 地址"} 是否正确`);
   }
   if (!response.ok || payload.success === false) {
-    throw new Error(payload.error ?? `Request failed (${response.status})`);
+    throw new Error(payload.error ?? `请求失败（HTTP ${response.status}）`);
   }
   return payload.data as T;
 }

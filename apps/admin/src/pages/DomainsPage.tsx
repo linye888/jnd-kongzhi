@@ -4,10 +4,15 @@ import { api, formatRate } from "../lib/api";
 interface DomainRow {
   id: number;
   hostname: string;
+  customerId: number;
+  productId: number;
+  landingPageId: number;
+  status: string;
   customerName: string;
   productName: string;
   landingPageName: string;
   sslStatus: string;
+  cfCustomHostnameId: string | null;
   cnameTarget: string;
   todayStats: { pageViews: number; uniqueVisitors: number; downloadCount: number; uniqueDownloaders: number; conversionRate: number };
 }
@@ -23,6 +28,8 @@ export default function DomainsPage() {
   const [landingPages, setLandingPages] = useState<LandingPage[]>([]);
   const [form, setForm] = useState({ hostname: "", customerId: "", productId: "", landingPageId: "" });
   const [csv, setCsv] = useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
   async function load() {
     const [domains, customerRows, productRows, lpRows] = await Promise.all([
@@ -41,33 +48,82 @@ export default function DomainsPage() {
 
   async function createDomain(e: React.FormEvent) {
     e.preventDefault();
-    await api("/api/admin/domains", {
-      method: "POST",
-      body: JSON.stringify({
-        hostname: form.hostname,
-        customerId: Number(form.customerId),
-        productId: Number(form.productId),
-        landingPageId: Number(form.landingPageId),
-      }),
-    });
-    setForm({ hostname: "", customerId: "", productId: "", landingPageId: "" });
-    await load();
+    setError("");
+    setMessage("");
+    try {
+      const row = await api<DomainRow>("/api/admin/domains", {
+        method: "POST",
+        body: JSON.stringify({
+          hostname: form.hostname,
+          customerId: Number(form.customerId),
+          productId: Number(form.productId),
+          landingPageId: Number(form.landingPageId),
+        }),
+      });
+      setForm({ hostname: "", customerId: "", productId: "", landingPageId: "" });
+      if (!row.cfCustomHostnameId) {
+        setMessage(`域名 ${row.hostname} 已添加，但 Cloudflare SSL 未自动创建（for SaaS 可能未开通）`);
+      } else {
+        setMessage(`域名 ${row.hostname} 已添加，SSL 状态：${row.sslStatus}`);
+      }
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "添加失败");
+    }
   }
 
   async function importCsv() {
-    const lines = csv.trim().split("\n").filter(Boolean);
-    const parsed = lines.map((line) => {
-      const [hostname, customerId, productId, landingPageId] = line.split(",").map((v) => v.trim());
-      return { hostname, customerId: Number(customerId), productId: Number(productId), landingPageId: Number(landingPageId) };
-    });
-    await api("/api/admin/domains/import", { method: "POST", body: JSON.stringify({ rows: parsed }) });
-    setCsv("");
+    setError("");
+    setMessage("");
+    try {
+      const lines = csv.trim().split("\n").filter(Boolean);
+      const parsed = lines.map((line) => {
+        const [hostname, customerId, productId, landingPageId] = line.split(",").map((v) => v.trim());
+        return { hostname, customerId: Number(customerId), productId: Number(productId), landingPageId: Number(landingPageId) };
+      });
+      const result = await api<{ success: number; failed: Array<{ row: number; hostname: string; error: string }> }>(
+        "/api/admin/domains/import",
+        { method: "POST", body: JSON.stringify({ rows: parsed }) },
+      );
+      setCsv("");
+      setMessage(`导入完成：成功 ${result.success} 条${result.failed.length ? `，失败 ${result.failed.length} 条` : ""}`);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "导入失败");
+    }
+  }
+
+  async function updateDomain(id: number, patch: { landingPageId?: number; status?: string }) {
+    setError("");
+    await api(`/api/admin/domains/${id}`, { method: "PUT", body: JSON.stringify(patch) });
+    setMessage("域名已更新");
+    await load();
+  }
+
+  async function refreshSsl(id: number) {
+    setError("");
+    try {
+      const row = await api<DomainRow>(`/api/admin/domains/${id}/refresh-ssl`, { method: "POST" });
+      setMessage(`${row.hostname} SSL 状态：${row.sslStatus}`);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "刷新失败");
+    }
+  }
+
+  async function deleteDomain(id: number, hostname: string) {
+    if (!confirm(`确定删除域名 ${hostname}？`)) return;
+    setError("");
+    await api(`/api/admin/domains/${id}`, { method: "DELETE" });
+    setMessage(`已删除 ${hostname}`);
     await load();
   }
 
   return (
     <div>
       <h1>域名管理</h1>
+      {message ? <div className="notice" style={{ marginBottom: 12 }}>{message}</div> : null}
+      {error ? <div className="error" style={{ marginBottom: 12 }}>{error}</div> : null}
 
       <div className="panel" style={{ marginBottom: 16 }}>
         <h2>添加域名</h2>
@@ -96,13 +152,14 @@ export default function DomainsPage() {
               <th>域名</th>
               <th>客户/产品</th>
               <th>落地页</th>
+              <th>状态</th>
               <th>SSL</th>
               <th>CNAME</th>
               <th>今日 PV</th>
               <th>今日 UV</th>
               <th>今日下载</th>
-              <th>独立下载</th>
               <th>转化率</th>
+              <th>操作</th>
             </tr>
           </thead>
           <tbody>
@@ -110,14 +167,40 @@ export default function DomainsPage() {
               <tr key={row.id}>
                 <td>{row.hostname}</td>
                 <td>{row.customerName} / {row.productName}</td>
-                <td>{row.landingPageName}</td>
+                <td>
+                  <select
+                    value={row.landingPageId}
+                    onChange={(e) => updateDomain(row.id, { landingPageId: Number(e.target.value) })}
+                  >
+                    {landingPages.map((lp) => <option key={lp.id} value={lp.id}>{lp.name}</option>)}
+                  </select>
+                </td>
+                <td>
+                  <select
+                    value={row.status}
+                    onChange={(e) => updateDomain(row.id, { status: e.target.value })}
+                  >
+                    <option value="active">active</option>
+                    <option value="inactive">inactive</option>
+                  </select>
+                </td>
                 <td><span className={`badge ${row.sslStatus}`}>{row.sslStatus}</span></td>
-                <td>{row.cnameTarget}</td>
+                <td><code>{row.cnameTarget}</code></td>
                 <td>{row.todayStats.pageViews}</td>
                 <td>{row.todayStats.uniqueVisitors}</td>
                 <td>{row.todayStats.downloadCount}</td>
-                <td>{row.todayStats.uniqueDownloaders}</td>
                 <td>{formatRate(row.todayStats.conversionRate)}</td>
+                <td className="actions">
+                  <button
+                    className="btn btn-secondary"
+                    disabled={!row.cfCustomHostnameId}
+                    title={row.cfCustomHostnameId ? "刷新 SSL 状态" : "未创建 Custom Hostname"}
+                    onClick={() => refreshSsl(row.id)}
+                  >
+                    刷新 SSL
+                  </button>
+                  <button className="btn btn-secondary" onClick={() => deleteDomain(row.id, row.hostname)}>删除</button>
+                </td>
               </tr>
             ))}
           </tbody>

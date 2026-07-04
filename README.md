@@ -78,9 +78,9 @@ pnpm dev:admin
 
 | 项目 | 地址 |
 |------|------|
-| Worker API | https://lp-admin-worker.ceddnabby.workers.dev |
-| **Admin 后台** | https://lp-admin-6rt.pages.dev |
-| 健康检查 | https://lp-admin-worker.ceddnabby.workers.dev/health |
+| Worker API | https://minishort.sbs |
+| **Admin 后台** | https://admin.minishort.sbs |
+| 健康检查 | https://minishort.sbs/health |
 | Fallback Origin（计划） | `origin.minishort.sbs` |
 | 客户 CNAME 目标 | `customers.minishort.sbs` |
 | Cloudflare Zone | `minishort.sbs` |
@@ -89,7 +89,9 @@ pnpm dev:admin
 
 ### Admin 前端（Cloudflare Pages）
 
-已部署：**https://lp-admin-6rt.pages.dev**
+已部署：**https://admin.minishort.sbs**
+
+> Admin 前端通过 `VITE_API_BASE=https://minishort.sbs` 连接 Worker API。不要使用 `*.workers.dev`（已禁用会 1042）。
 
 本地重新部署：
 
