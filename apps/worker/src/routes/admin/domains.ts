@@ -31,6 +31,8 @@ const domainSelect = {
   updatedAt: domains.updatedAt,
   downloadUrl: landingPages.downloadUrl,
   pixelId: landingPages.pixelId,
+  templateKey: landingPages.templateKey,
+  templateName: landingPages.name,
 };
 
 app.get("/", async (c) => {
@@ -46,6 +48,8 @@ app.get("/", async (c) => {
     ...row,
     downloadUrl: row.downloadUrl ?? "",
     pixelId: row.pixelId ?? "",
+    templateKey: row.templateKey ?? "india-en",
+    templateName: row.templateName ?? "Mini Short - 印度英语",
     cnameTarget: row.cnameTarget ?? c.env.CNAME_TARGET,
     todayStats: statsMap.get(row.id) ?? {
       pageViews: 0,
@@ -112,13 +116,15 @@ app.get("/:id", async (c) => {
     ...row,
     downloadUrl: row.downloadUrl ?? "",
     pixelId: row.pixelId ?? "",
+    templateKey: row.templateKey ?? "india-en",
+    templateName: row.templateName ?? "Mini Short - 印度英语",
     cnameTarget: row.cnameTarget ?? c.env.CNAME_TARGET,
     setup: buildDomainSetupGuide(c.env, row.hostname),
   });
 });
 
 app.post("/", async (c) => {
-  const body = await c.req.json<{ hostname: string; downloadUrl: string; pixelId: string }>();
+  const body = await c.req.json<{ hostname: string; downloadUrl: string; pixelId: string; templateId?: string }>();
   if (!body.hostname?.trim()) return errorResponse("域名不能为空", 400);
   if (!body.downloadUrl?.trim()) return errorResponse("下载链接不能为空", 400);
   if (!body.pixelId?.trim()) return errorResponse("Pixel ID 不能为空", 400);
@@ -131,6 +137,7 @@ app.post("/", async (c) => {
     hostname,
     downloadUrl: body.downloadUrl.trim(),
     pixelId: body.pixelId.trim(),
+    templateId: body.templateId,
     customerId: tenant.customerId,
     productId: tenant.productId,
   });
@@ -157,6 +164,8 @@ app.post("/", async (c) => {
       ...row,
       downloadUrl: landingPage.downloadUrl,
       pixelId: landingPage.pixelId,
+      templateKey: landingPage.templateKey,
+      templateName: landingPage.name,
       setup: provision.setup,
       warnings: provision.warnings,
     },

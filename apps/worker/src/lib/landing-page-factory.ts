@@ -1,6 +1,6 @@
-import { customers, landingPages, products } from "@lp-admin/db";
-import { DEFAULT_EN_LANDING } from "@lp-admin/templates";
+import { getLandingTemplate, isLandingTemplateId, listLandingTemplateOptions } from "@lp-admin/templates";
 import { eq } from "drizzle-orm";
+import { customers, landingPages, products } from "@lp-admin/db";
 import { getDb, nowIso } from "./utils";
 
 type Db = ReturnType<typeof getDb>;
@@ -32,47 +32,57 @@ export async function ensureDefaultTenant(db: Db) {
 
 export async function createLandingPageForDomain(
   db: Db,
-  input: { hostname: string; downloadUrl: string; pixelId: string; customerId: number; productId: number },
+  input: {
+    hostname: string;
+    downloadUrl: string;
+    pixelId: string;
+    templateId?: string;
+    customerId: number;
+    productId: number;
+  },
 ) {
-  const template = DEFAULT_EN_LANDING;
+  const templateId = isLandingTemplateId(input.templateId ?? "") ? input.templateId! : "india-en";
+  const template = getLandingTemplate(templateId);
+  const preset = template.preset;
   const ts = nowIso();
   const [row] = await db
     .insert(landingPages)
     .values({
-      name: input.hostname,
+      name: template.name,
+      templateKey: template.id,
       customerId: input.customerId,
       productId: input.productId,
-      locale: template.locale,
-      status: template.status,
-      pageTitle: template.pageTitle,
-      metaDescription: template.metaDescription,
-      brandName: template.brandName,
-      brandSubtitle: template.brandSubtitle,
-      logoUrl: template.logoUrl,
-      bannerUrl: template.bannerUrl,
-      rewardText: template.rewardText,
+      locale: preset.locale,
+      status: preset.status,
+      pageTitle: preset.pageTitle,
+      metaDescription: preset.metaDescription,
+      brandName: preset.brandName,
+      brandSubtitle: preset.brandSubtitle,
+      logoUrl: preset.logoUrl,
+      bannerUrl: preset.bannerUrl,
+      rewardText: preset.rewardText,
       downloadUrl: input.downloadUrl,
       pixelId: input.pixelId,
-      leadStorageKey: template.leadStorageKey,
-      heroTag: template.heroTag,
-      heroTitle: template.heroTitle,
-      heroDescription: template.heroDescription,
-      heroCtaText: template.heroCtaText,
-      securityBadgeText: template.securityBadgeText,
-      dramasSectionTitle: template.dramasSectionTitle,
-      dramasSectionSubtitle: template.dramasSectionSubtitle,
-      dramasJson: JSON.stringify(template.dramas),
-      installGuideTitle: template.installGuideTitle,
-      installGuideSubtitle: template.installGuideSubtitle,
-      installStepsJson: JSON.stringify(template.installSteps),
-      finalTitle: template.finalTitle,
-      finalDescription: template.finalDescription,
-      finalCtaText: template.finalCtaText,
-      footerText: template.footerText,
-      modalTitlePrefix: template.modalTitlePrefix,
-      modalDescription: template.modalDescription,
-      modalCtaText: template.modalCtaText,
-      modalCancelText: template.modalCancelText,
+      leadStorageKey: preset.leadStorageKey,
+      heroTag: preset.heroTag,
+      heroTitle: preset.heroTitle,
+      heroDescription: preset.heroDescription,
+      heroCtaText: preset.heroCtaText,
+      securityBadgeText: preset.securityBadgeText,
+      dramasSectionTitle: preset.dramasSectionTitle,
+      dramasSectionSubtitle: preset.dramasSectionSubtitle,
+      dramasJson: JSON.stringify(preset.dramas),
+      installGuideTitle: preset.installGuideTitle,
+      installGuideSubtitle: preset.installGuideSubtitle,
+      installStepsJson: JSON.stringify(preset.installSteps),
+      finalTitle: preset.finalTitle,
+      finalDescription: preset.finalDescription,
+      finalCtaText: preset.finalCtaText,
+      footerText: preset.footerText,
+      modalTitlePrefix: preset.modalTitlePrefix,
+      modalDescription: preset.modalDescription,
+      modalCtaText: preset.modalCtaText,
+      modalCancelText: preset.modalCancelText,
       createdAt: ts,
       updatedAt: ts,
     })
@@ -92,3 +102,5 @@ export async function updateLandingPageFields(
   const [row] = await db.update(landingPages).set(update).where(eq(landingPages.id, landingPageId)).returning();
   return row;
 }
+
+export { listLandingTemplateOptions, getLandingTemplate, isLandingTemplateId };

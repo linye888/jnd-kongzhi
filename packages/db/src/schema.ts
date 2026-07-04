@@ -19,6 +19,7 @@ export const products = sqliteTable("products", {
 export const landingPages = sqliteTable("landing_pages", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
+  templateKey: text("template_key").notNull().default("india-en"),
   customerId: integer("customer_id").notNull().references(() => customers.id),
   productId: integer("product_id").notNull().references(() => products.id),
   locale: text("locale").notNull().default("en"),

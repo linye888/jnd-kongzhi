@@ -186,6 +186,16 @@ export interface DomainSetupGuide {
   note?: string;
 }
 
+export interface LandingTemplateOption {
+  id: string;
+  name: string;
+  description: string;
+  locale: string;
+  defaultDownloadUrl: string;
+  defaultPixelId: string;
+  rewardText: string;
+}
+
 export interface AuditLog {
   id: number;
   userId: number;

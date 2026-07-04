@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import type { DomainSetupGuide } from "@lp-admin/shared";
+import type { DomainSetupGuide, LandingTemplateOption } from "@lp-admin/shared";
 import DomainSetupGuidePanel from "../components/DomainSetupGuide";
 import { api, formatRate } from "../lib/api";
 
@@ -9,6 +9,8 @@ interface DomainRow {
   hostname: string;
   downloadUrl: string;
   pixelId: string;
+  templateKey: string;
+  templateName: string;
   status: string;
   sslStatus: string;
   todayStats: {
@@ -33,6 +35,13 @@ interface DomainHealth {
   checkedAt: string;
 }
 
+interface DomainForm {
+  hostname: string;
+  templateId: string;
+  downloadUrl: string;
+  pixelId: string;
+}
+
 function HealthBadge({ health, checking }: { health?: DomainHealth; checking?: boolean }) {
   if (checking || !health) {
     return (
@@ -51,12 +60,26 @@ function HealthBadge({ health, checking }: { health?: DomainHealth; checking?: b
   );
 }
 
+function buildFormFromTemplate(templates: LandingTemplateOption[], templateId: string, prev?: Partial<DomainForm>): DomainForm {
+  const template = templates.find((item) => item.id === templateId) ?? templates[0];
+  if (!template) {
+    return { hostname: prev?.hostname ?? "", templateId: templateId || "india-en", downloadUrl: "", pixelId: "" };
+  }
+  return {
+    hostname: prev?.hostname ?? "",
+    templateId: template.id,
+    downloadUrl: template.defaultDownloadUrl,
+    pixelId: template.defaultPixelId,
+  };
+}
+
 export default function DomainsPage() {
   const [rows, setRows] = useState<DomainRow[]>([]);
+  const [templates, setTemplates] = useState<LandingTemplateOption[]>([]);
   const [drafts, setDrafts] = useState<Record<number, DomainDraft>>({});
   const [healthMap, setHealthMap] = useState<Record<number, DomainHealth>>({});
   const [healthChecking, setHealthChecking] = useState(false);
-  const [form, setForm] = useState({ hostname: "", downloadUrl: "", pixelId: "" });
+  const [form, setForm] = useState<DomainForm>({ hostname: "", templateId: "india-en", downloadUrl: "", pixelId: "" });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [lastSetup, setLastSetup] = useState<DomainSetupGuide | null>(null);
@@ -101,12 +124,25 @@ export default function DomainsPage() {
   }
 
   useEffect(() => {
+    api<LandingTemplateOption[]>("/api/admin/templates")
+      .then((items) => {
+        setTemplates(items);
+        if (items.length > 0) {
+          setForm((prev) => buildFormFromTemplate(items, prev.templateId || items[0].id, prev));
+        }
+      })
+      .catch(console.error);
+
     load()
       .then((domains) => {
         if (domains.length > 0) runHealthCheck(domains.map((d) => d.id));
       })
       .catch(console.error);
   }, []);
+
+  function onTemplateChange(templateId: string) {
+    setForm((prev) => buildFormFromTemplate(templates, templateId, { hostname: prev.hostname }));
+  }
 
   async function createDomain(e: React.FormEvent) {
     e.preventDefault();
@@ -115,9 +151,14 @@ export default function DomainsPage() {
     try {
       const row = await api<DomainRow & { setup?: DomainSetupGuide; warnings?: string[] }>("/api/admin/domains", {
         method: "POST",
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          hostname: form.hostname,
+          templateId: form.templateId,
+          downloadUrl: form.downloadUrl,
+          pixelId: form.pixelId,
+        }),
       });
-      setForm({ hostname: "", downloadUrl: "", pixelId: "" });
+      setForm(buildFormFromTemplate(templates, form.templateId));
       if (row.setup) setLastSetup(row.setup);
       const warnText = row.warnings?.length ? ` ${row.warnings.join(" ")}` : "";
       setMessage(`已添加 ${row.hostname}${warnText}`.trim());
@@ -165,10 +206,12 @@ export default function DomainsPage() {
     setDrafts((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
   }
 
+  const selectedTemplate = templates.find((item) => item.id === form.templateId);
+
   return (
     <div>
       <h1>域名管理</h1>
-      <p className="muted">添加域名，填写下载链接和 Pixel ID 即可投放</p>
+      <p className="muted">选择落地页模板，添加域名后修改下载链接和 Pixel ID 即可投放</p>
 
       {message ? <div className="notice" style={{ marginBottom: 12 }}>{message}</div> : null}
       {error ? <div className="error" style={{ marginBottom: 12 }}>{error}</div> : null}
@@ -183,6 +226,19 @@ export default function DomainsPage() {
       <div className="panel" style={{ marginBottom: 16 }}>
         <h2>添加域名</h2>
         <form className="form-grid" onSubmit={createDomain}>
+          <label>
+            落地页模板
+            <select value={form.templateId} onChange={(e) => onTemplateChange(e.target.value)} required>
+              {templates.map((item) => (
+                <option key={item.id} value={item.id}>{item.name}</option>
+              ))}
+            </select>
+          </label>
+          {selectedTemplate ? (
+            <p className="muted" style={{ margin: 0, gridColumn: "1 / -1" }}>
+              {selectedTemplate.description} · 默认奖励：{selectedTemplate.rewardText}
+            </p>
+          ) : null}
           <label>
             域名
             <input
@@ -230,6 +286,7 @@ export default function DomainsPage() {
             <tr>
               <th>健康</th>
               <th>域名</th>
+              <th>模板</th>
               <th>下载链接</th>
               <th>Pixel ID</th>
               <th>状态</th>
@@ -256,6 +313,7 @@ export default function DomainsPage() {
                       SSL: <span className={`badge ${row.sslStatus}`}>{row.sslStatus}</span>
                     </div>
                   </td>
+                  <td>{row.templateName}</td>
                   <td>
                     <input
                       className="table-input"
