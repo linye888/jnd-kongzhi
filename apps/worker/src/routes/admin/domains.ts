@@ -8,8 +8,10 @@ import { getCustomHostnameStatus, mapSslStatus } from "../../lib/cf";
 import {
   applyLandingTemplate,
   createLandingPageForDomain,
+  ensureDedicatedLandingPage,
   ensureDefaultTenant,
   isLandingTemplateId,
+  splitAllSharedLandingPages,
   updateLandingPageFields,
 } from "../../lib/landing-page-factory";
 import { provisionDomain, provisionDomainSaas } from "../../lib/provision-domain";
@@ -63,6 +65,18 @@ app.get("/", async (c) => {
     },
   }));
   return jsonResponse(enriched);
+});
+
+app.post("/maintenance/split-landing-pages", async (c) => {
+  const db = getDb(c.env);
+  const result = await splitAllSharedLandingPages(db);
+  const rows = await db
+    .select({ id: domains.id, hostname: domains.hostname, landingPageId: domains.landingPageId })
+    .from(domains);
+  for (const row of rows) {
+    await invalidateDomainCache(c.env, row.hostname);
+  }
+  return jsonResponse({ ...result, domains: rows });
 });
 
 app.post("/health-check", async (c) => {
@@ -189,11 +203,16 @@ app.put("/:id", async (c) => {
   const [existing] = await db.select().from(domains).where(eq(domains.id, id)).limit(1);
   if (!existing) return errorResponse("Not found", 404);
 
+  let landingPageId = existing.landingPageId;
+  if (body.templateId !== undefined || body.downloadUrl !== undefined || body.pixelId !== undefined) {
+    landingPageId = await ensureDedicatedLandingPage(db, id);
+  }
+
   let lp;
   if (body.templateId !== undefined) {
     if (!isLandingTemplateId(body.templateId)) return errorResponse("无效的模板", 400);
     try {
-      lp = await applyLandingTemplate(db, existing.landingPageId, body.templateId, {
+      lp = await applyLandingTemplate(db, landingPageId, body.templateId, {
         downloadUrl: body.downloadUrl,
         pixelId: body.pixelId,
         useTemplateDefaults: body.useTemplateDefaults,
@@ -202,7 +221,7 @@ app.put("/:id", async (c) => {
       return errorResponse(error instanceof Error ? error.message : "更换模板失败", 400);
     }
   } else if (body.downloadUrl !== undefined || body.pixelId !== undefined) {
-    lp = await updateLandingPageFields(db, existing.landingPageId, {
+    lp = await updateLandingPageFields(db, landingPageId, {
       downloadUrl: body.downloadUrl?.trim(),
       pixelId: body.pixelId?.trim(),
     });
@@ -218,7 +237,7 @@ app.put("/:id", async (c) => {
     .returning();
 
   if (!lp) {
-    [lp] = await db.select().from(landingPages).where(eq(landingPages.id, existing.landingPageId)).limit(1);
+    [lp] = await db.select().from(landingPages).where(eq(landingPages.id, landingPageId)).limit(1);
   }
   await invalidateDomainCache(c.env, existing.hostname);
   return jsonResponse({

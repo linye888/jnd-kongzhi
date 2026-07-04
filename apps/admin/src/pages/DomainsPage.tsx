@@ -237,8 +237,16 @@ export default function DomainsPage() {
     await load();
   }
 
-  function setDraft(id: number, patch: Partial<DomainDraft>) {
-    setDrafts((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
+  function setDraft(id: number, patch: Partial<DomainDraft>, row?: DomainRow) {
+    setDrafts((prev) => ({
+      ...prev,
+      [id]: {
+        downloadUrl: prev[id]?.downloadUrl ?? row?.downloadUrl ?? "",
+        pixelId: prev[id]?.pixelId ?? row?.pixelId ?? "",
+        templateKey: prev[id]?.templateKey ?? row?.templateKey ?? "india-en",
+        ...patch,
+      },
+    }));
   }
 
   const selectedTemplate = templates.find((item) => item.id === form.templateId);
@@ -369,14 +377,14 @@ export default function DomainsPage() {
                     <input
                       className="table-input"
                       value={draft.downloadUrl}
-                      onChange={(e) => setDraft(row.id, { downloadUrl: e.target.value })}
+                      onChange={(e) => setDraft(row.id, { downloadUrl: e.target.value }, row)}
                     />
                   </td>
                   <td>
                     <input
                       className="table-input table-input-short"
                       value={draft.pixelId}
-                      onChange={(e) => setDraft(row.id, { pixelId: e.target.value })}
+                      onChange={(e) => setDraft(row.id, { pixelId: e.target.value }, row)}
                     />
                   </td>
                   <td>
