@@ -1,0 +1,28 @@
+{
+  "name": "@lp-admin/admin",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:production": "vite build --mode production",
+    "deploy": "vite build --mode production && wrangler pages deploy dist --project-name=lp-admin --branch=main --commit-dirty=true",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@lp-admin/shared": "workspace:*",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router-dom": "^7.6.3"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^4.6.0",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.2",
+    "wrangler": "^4.24.0"
+  }
+}

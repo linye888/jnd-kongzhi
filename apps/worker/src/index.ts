@@ -1,0 +1,41 @@
+import { Hono } from "hono";
+import { cors } from "hono/cors";
+import type { Env } from "./env";
+import authRoutes from "./routes/auth";
+import customerRoutes from "./routes/admin/customers";
+import productRoutes from "./routes/admin/products";
+import landingPageRoutes from "./routes/admin/landing-pages";
+import domainRoutes from "./routes/admin/domains";
+import statsRoutes from "./routes/admin/stats";
+import userRoutes from "./routes/admin/users";
+import eventRoutes from "./routes/events";
+import { handleLandingRequest } from "./routes/landing";
+
+const app = new Hono<{ Bindings: Env }>();
+
+app.use("*", cors({ origin: "*", allowHeaders: ["Content-Type", "Authorization"], allowMethods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"] }));
+
+app.route("/api/auth", authRoutes);
+app.route("/api/admin/customers", customerRoutes);
+app.route("/api/admin/products", productRoutes);
+app.route("/api/admin/landing-pages", landingPageRoutes);
+app.route("/api/admin/domains", domainRoutes);
+app.route("/api/admin/stats", statsRoutes);
+app.route("/api/admin/users", userRoutes);
+app.route("/api/event", eventRoutes);
+
+app.get("/health", (c) => c.json({ ok: true }));
+
+app.all("*", async (c) => {
+  const landing = await handleLandingRequest(c.req.raw, c.env, c.executionCtx);
+  if (landing) return landing;
+  return c.notFound();
+});
+
+export default {
+  fetch: app.fetch,
+  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+    const { refreshTodayAggregates } = await import("./lib/stats");
+    ctx.waitUntil(refreshTodayAggregates(env));
+  },
+};

@@ -1,0 +1,25 @@
+{
+  "name": "lp-admin",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --parallel --filter @lp-admin/worker --filter @lp-admin/admin dev",
+    "dev:worker": "pnpm --filter @lp-admin/worker dev",
+    "dev:admin": "pnpm --filter @lp-admin/admin dev",
+    "build": "pnpm --filter @lp-admin/shared build && pnpm --filter @lp-admin/db build && pnpm --filter @lp-admin/templates build && pnpm --filter @lp-admin/worker build && pnpm --filter @lp-admin/admin build",
+    "db:generate": "pnpm --filter @lp-admin/db generate",
+    "db:migrate:local": "pnpm --filter @lp-admin/worker db:migrate:local",
+    "db:seed:local": "curl -s -X POST http://127.0.0.1:8787/api/auth/seed",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "packageManager": "pnpm@10.33.3",
+  "engines": {
+    "node": ">=20"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "workerd",
+      "sharp"
+    ]
+  }
+}

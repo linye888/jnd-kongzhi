@@ -1,0 +1,25 @@
+{
+  "name": "@lp-admin/worker",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "build": "wrangler deploy --dry-run --outdir=dist",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "db:migrate:local": "wrangler d1 migrations apply lp-admin-db --local"
+  },
+  "dependencies": {
+    "@lp-admin/db": "workspace:*",
+    "@lp-admin/shared": "workspace:*",
+    "@lp-admin/templates": "workspace:*",
+    "drizzle-orm": "^0.44.2",
+    "hono": "^4.8.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250704.0",
+    "typescript": "^5.8.3",
+    "wrangler": "^4.24.0"
+  }
+}
