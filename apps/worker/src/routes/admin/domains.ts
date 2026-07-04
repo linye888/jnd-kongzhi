@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
-import { customers, domains, landingPages, products } from "@lp-admin/db";
+import { customers, domains, domainStatsDaily, events, landingPages, products } from "@lp-admin/db";
 import type { DomainImportResult } from "@lp-admin/shared";
 import type { Env } from "../../env";
 import { authMiddleware } from "../../middleware/auth";
@@ -252,7 +252,10 @@ app.delete("/:id", async (c) => {
   const id = Number(c.req.param("id"));
   const db = getDb(c.env);
   const [row] = await db.select().from(domains).where(eq(domains.id, id)).limit(1);
-  if (row) await invalidateDomainCache(c.env, row.hostname);
+  if (!row) return errorResponse("Not found", 404);
+  await invalidateDomainCache(c.env, row.hostname);
+  await db.delete(events).where(eq(events.domainId, id));
+  await db.delete(domainStatsDaily).where(eq(domainStatsDaily.domainId, id));
   await db.delete(domains).where(eq(domains.id, id));
   return jsonResponse({ deleted: true });
 });
