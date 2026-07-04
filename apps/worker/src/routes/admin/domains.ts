@@ -12,6 +12,7 @@ import {
 } from "../../lib/landing-page-factory";
 import { provisionDomain, provisionDomainSaas } from "../../lib/provision-domain";
 import { invalidateDomainCache } from "../../lib/domains";
+import { checkDomainHealth, checkDomainsHealth } from "../../lib/domain-health";
 import { getTodaySummaryForDomains } from "../../lib/stats";
 import { getDb, jsonResponse, errorResponse, nowIso, normalizeHostname } from "../../lib/utils";
 
@@ -56,6 +57,37 @@ app.get("/", async (c) => {
     },
   }));
   return jsonResponse(enriched);
+});
+
+app.post("/health-check", async (c) => {
+  const body = await c.req.json<{ ids?: number[] }>().catch(() => ({} as { ids?: number[] }));
+  const db = getDb(c.env);
+  let rows = await db
+    .select({ id: domains.id, hostname: domains.hostname, status: domains.status })
+    .from(domains)
+    .orderBy(domains.id);
+
+  if (body.ids?.length) {
+    const idSet = new Set(body.ids);
+    rows = rows.filter((row) => idSet.has(row.id));
+  }
+
+  const results = await checkDomainsHealth(rows);
+  return jsonResponse({ results });
+});
+
+app.get("/:id/health", async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isFinite(id)) return errorResponse("Invalid id", 400);
+  const db = getDb(c.env);
+  const [row] = await db
+    .select({ id: domains.id, hostname: domains.hostname, status: domains.status })
+    .from(domains)
+    .where(eq(domains.id, id))
+    .limit(1);
+  if (!row) return errorResponse("Not found", 404);
+  const health = await checkDomainHealth(row.hostname, row.status);
+  return jsonResponse({ id: row.id, hostname: row.hostname, health });
 });
 
 app.get("/:id/setup", async (c) => {

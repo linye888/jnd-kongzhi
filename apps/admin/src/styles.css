@@ -77,6 +77,24 @@ button, input, select, textarea { font: inherit; }
 }
 .table-domains .table-input-short { min-width: 120px; }
 .table-domains td { vertical-align: top; }
+.health-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+.health-dot.healthy { background: #22c55e; box-shadow: 0 0 6px rgba(34, 197, 94, 0.5); }
+.health-dot.unhealthy { background: #ef4444; box-shadow: 0 0 6px rgba(239, 68, 68, 0.5); }
+.health-dot.inactive { background: #6b7280; }
+.health-dot.checking { background: #6b7280; animation: health-pulse 1s ease-in-out infinite; }
+.health-label { display: inline-flex; align-items: center; font-size: 13px; cursor: default; }
+.health-label[title] { border-bottom: 1px dotted var(--muted); }
+@keyframes health-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
 @media (max-width: 900px) {
   .layout { grid-template-columns: 1fr; }
   .sidebar { position: static; height: auto; }

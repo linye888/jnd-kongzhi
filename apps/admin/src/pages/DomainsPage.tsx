@@ -25,9 +25,37 @@ interface DomainDraft {
   pixelId: string;
 }
 
+interface DomainHealth {
+  ok: boolean;
+  status: "healthy" | "unhealthy" | "inactive";
+  statusCode?: number;
+  message: string;
+  checkedAt: string;
+}
+
+function HealthBadge({ health, checking }: { health?: DomainHealth; checking?: boolean }) {
+  if (checking || !health) {
+    return (
+      <span className="health-label" title="检测中…">
+        <span className="health-dot checking" />
+        检测中
+      </span>
+    );
+  }
+  const label = health.status === "healthy" ? "正常" : health.status === "inactive" ? "已停用" : "异常";
+  return (
+    <span className="health-label" title={health.message}>
+      <span className={`health-dot ${health.status}`} />
+      {label}
+    </span>
+  );
+}
+
 export default function DomainsPage() {
   const [rows, setRows] = useState<DomainRow[]>([]);
   const [drafts, setDrafts] = useState<Record<number, DomainDraft>>({});
+  const [healthMap, setHealthMap] = useState<Record<number, DomainHealth>>({});
+  const [healthChecking, setHealthChecking] = useState(false);
   const [form, setForm] = useState({ hostname: "", downloadUrl: "", pixelId: "" });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -40,10 +68,44 @@ export default function DomainsPage() {
     setDrafts(
       Object.fromEntries(domains.map((d) => [d.id, { downloadUrl: d.downloadUrl, pixelId: d.pixelId }])),
     );
+    return domains;
+  }
+
+  async function runHealthCheck(ids?: number[]) {
+    setHealthChecking(true);
+    setError("");
+    setHealthMap((prev) => {
+      if (!ids?.length) return {};
+      const next = { ...prev };
+      for (const id of ids) delete next[id];
+      return next;
+    });
+    try {
+      const payload = ids?.length ? { ids } : {};
+      const data = await api<{ results: Array<{ id: number; health: DomainHealth }> }>(
+        "/api/admin/domains/health-check",
+        { method: "POST", body: JSON.stringify(payload) },
+      );
+      setHealthMap((prev) => {
+        const next = { ...prev };
+        for (const item of data.results) {
+          next[item.id] = item.health;
+        }
+        return next;
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "健康检查失败");
+    } finally {
+      setHealthChecking(false);
+    }
   }
 
   useEffect(() => {
-    load().catch(console.error);
+    load()
+      .then((domains) => {
+        if (domains.length > 0) runHealthCheck(domains.map((d) => d.id));
+      })
+      .catch(console.error);
   }, []);
 
   async function createDomain(e: React.FormEvent) {
@@ -59,7 +121,8 @@ export default function DomainsPage() {
       if (row.setup) setLastSetup(row.setup);
       const warnText = row.warnings?.length ? ` ${row.warnings.join(" ")}` : "";
       setMessage(`已添加 ${row.hostname}${warnText}`.trim());
-      await load();
+      const domains = await load();
+      if (domains.length > 0) await runHealthCheck([row.id]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "添加失败");
     }
@@ -152,9 +215,20 @@ export default function DomainsPage() {
       </div>
 
       <div className="panel">
+        <div className="topbar" style={{ marginBottom: 12 }}>
+          <h2 style={{ margin: 0 }}>域名列表</h2>
+          <button
+            className="btn btn-secondary"
+            disabled={healthChecking || rows.length === 0}
+            onClick={() => runHealthCheck()}
+          >
+            {healthChecking ? "检测中…" : "重新检测"}
+          </button>
+        </div>
         <table className="table table-domains">
           <thead>
             <tr>
+              <th>健康</th>
               <th>域名</th>
               <th>下载链接</th>
               <th>Pixel ID</th>
@@ -173,6 +247,9 @@ export default function DomainsPage() {
                 draft.downloadUrl !== row.downloadUrl || draft.pixelId !== row.pixelId;
               return (
                 <tr key={row.id}>
+                  <td>
+                    <HealthBadge health={healthMap[row.id]} checking={healthChecking && !(row.id in healthMap)} />
+                  </td>
                   <td>
                     <Link className="link" to={`/domains/${row.id}`}>{row.hostname}</Link>
                     <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
