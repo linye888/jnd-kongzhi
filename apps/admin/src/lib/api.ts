@@ -1,5 +1,9 @@
 const API_BASE = import.meta.env.VITE_API_BASE ?? "";
 
+export function getApiBase() {
+  return API_BASE;
+}
+
 export function getToken(): string | null {
   return localStorage.getItem("lp_admin_token");
 }
@@ -36,4 +40,8 @@ export function defaultRange(days = 7) {
   const to = new Date().toISOString().slice(0, 10);
   const from = new Date(Date.now() - (days - 1) * 86400000).toISOString().slice(0, 10);
   return { from, to };
+}
+
+export function previewUrl(landingPageId: number) {
+  return `${API_BASE}/api/admin/landing-pages/${landingPageId}/preview`;
 }

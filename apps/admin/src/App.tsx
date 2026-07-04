@@ -6,6 +6,7 @@ import DashboardPage from "./pages/DashboardPage";
 import StatsPage from "./pages/StatsPage";
 import DomainsPage from "./pages/DomainsPage";
 import LandingPagesPage from "./pages/LandingPagesPage";
+import LandingPageEditPage from "./pages/LandingPageEditPage";
 import CustomersPage from "./pages/CustomersPage";
 import ProductsPage from "./pages/ProductsPage";
 import UsersPage from "./pages/UsersPage";
@@ -33,6 +34,8 @@ export default function App() {
           <Route index element={<DashboardPage />} />
           <Route path="stats" element={<StatsPage />} />
           <Route path="domains" element={<DomainsPage />} />
+          <Route path="landing-pages/new" element={<LandingPageEditPage />} />
+          <Route path="landing-pages/:id/edit" element={<LandingPageEditPage />} />
           <Route path="landing-pages" element={<LandingPagesPage />} />
           <Route path="customers" element={<CustomersPage />} />
           <Route path="products" element={<ProductsPage />} />
