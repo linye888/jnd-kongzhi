@@ -7,6 +7,7 @@ export interface Env {
   ASSETS: Fetcher;
   JWT_SECRET: string;
   CNAME_TARGET: string;
+  FALLBACK_ORIGIN?: string;
   CF_ACCOUNT_ID?: string;
   CF_API_TOKEN?: string;
   CF_ZONE_ID?: string;

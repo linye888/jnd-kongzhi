@@ -4,7 +4,9 @@ import { customers, domains, landingPages, products } from "@lp-admin/db";
 import type { DomainImportResult } from "@lp-admin/shared";
 import type { Env } from "../../env";
 import { authMiddleware } from "../../middleware/auth";
-import { createCustomHostname, getCustomHostnameStatus, mapSslStatus } from "../../lib/cf";
+import { buildDomainSetupGuide, bindPlatformWorkerDomain } from "../../lib/domain-setup";
+import { getCustomHostnameStatus, mapSslStatus } from "../../lib/cf";
+import { provisionDomain, provisionDomainSaas } from "../../lib/provision-domain";
 import { invalidateDomainCache } from "../../lib/domains";
 import { getTodaySummaryForDomains } from "../../lib/stats";
 import { getDb, jsonResponse, errorResponse, nowIso, normalizeHostname } from "../../lib/utils";
@@ -44,12 +46,21 @@ app.get("/", async (c) => {
     todayStats: statsMap.get(row.id) ?? {
       pageViews: 0,
       uniqueVisitors: 0,
+      botPageViews: 0,
       downloadCount: 0,
       uniqueDownloaders: 0,
       conversionRate: 0,
     },
   }));
   return jsonResponse(enriched);
+});
+
+app.get("/:id/setup", async (c) => {
+  const id = Number(c.req.param("id"));
+  const db = getDb(c.env);
+  const [row] = await db.select().from(domains).where(eq(domains.id, id)).limit(1);
+  if (!row) return errorResponse("Not found", 404);
+  return jsonResponse(buildDomainSetupGuide(c.env, row.hostname));
 });
 
 app.get("/:id", async (c) => {
@@ -79,7 +90,11 @@ app.get("/:id", async (c) => {
     .where(eq(domains.id, id))
     .limit(1);
   if (!row) return errorResponse("Not found", 404);
-  return jsonResponse({ ...row, cnameTarget: row.cnameTarget ?? c.env.CNAME_TARGET });
+  return jsonResponse({
+    ...row,
+    cnameTarget: row.cnameTarget ?? c.env.CNAME_TARGET,
+    setup: buildDomainSetupGuide(c.env, row.hostname),
+  });
 });
 
 app.post("/", async (c) => {
@@ -87,7 +102,7 @@ app.post("/", async (c) => {
   const db = getDb(c.env);
   const ts = nowIso();
   const hostname = normalizeHostname(body.hostname);
-  const cf = await createCustomHostname(c.env, hostname);
+  const provision = await provisionDomain(c.env, hostname);
   const [row] = await db
     .insert(domains)
     .values({
@@ -96,14 +111,15 @@ app.post("/", async (c) => {
       productId: body.productId,
       landingPageId: body.landingPageId,
       status: "active",
-      sslStatus: mapSslStatus(cf.result?.ssl.status),
-      cfCustomHostnameId: cf.result?.id ?? null,
+      sslStatus: provision.sslStatus,
+      cfCustomHostnameId: provision.cfCustomHostnameId,
       cnameTarget: c.env.CNAME_TARGET,
       createdAt: ts,
       updatedAt: ts,
     })
     .returning();
-  return jsonResponse({ ...row, cfWarning: cf.warning ?? null }, 201);
+  await invalidateDomainCache(c.env, hostname);
+  return jsonResponse({ ...row, setup: provision.setup, warnings: provision.warnings }, 201);
 });
 
 app.put("/:id", async (c) => {
@@ -138,23 +154,24 @@ app.post("/import", async (c) => {
     const item = body.rows[i];
     try {
       const hostname = normalizeHostname(item.hostname);
-      const cf = await createCustomHostname(c.env, hostname);
+      const provision = await provisionDomain(c.env, hostname);
       await db.insert(domains).values({
         hostname,
         customerId: item.customerId,
         productId: item.productId,
         landingPageId: item.landingPageId,
         status: "active",
-        sslStatus: mapSslStatus(cf.result?.ssl.status),
-        cfCustomHostnameId: cf.result?.id ?? null,
+        sslStatus: provision.sslStatus,
+        cfCustomHostnameId: provision.cfCustomHostnameId,
         cnameTarget: c.env.CNAME_TARGET,
         createdAt: ts,
         updatedAt: ts,
       });
+      await invalidateDomainCache(c.env, hostname);
       result.success += 1;
-      if (cf.warning) {
+      for (const msg of provision.warnings) {
         if (!result.warnings) result.warnings = [];
-        result.warnings.push({ hostname, message: cf.warning });
+        result.warnings.push({ hostname, message: msg });
       }
     } catch (error) {
       result.failed.push({ row: i + 1, hostname: item.hostname, error: error instanceof Error ? error.message : "Unknown error" });
@@ -164,12 +181,35 @@ app.post("/import", async (c) => {
   return jsonResponse(result);
 });
 
+app.post("/:id/bind-worker", async (c) => {
+  const id = Number(c.req.param("id"));
+  const db = getDb(c.env);
+  const [row] = await db.select().from(domains).where(eq(domains.id, id)).limit(1);
+  if (!row) return errorResponse("Not found", 404);
+
+  const bind = await bindPlatformWorkerDomain(c.env, row.hostname);
+  if (!bind.ok) return errorResponse(bind.message ?? "绑定失败", 400);
+
+  const [updated] = await db
+    .update(domains)
+    .set({ sslStatus: "active", updatedAt: nowIso() })
+    .where(eq(domains.id, id))
+    .returning();
+  return jsonResponse({ ...updated, setup: buildDomainSetupGuide(c.env, row.hostname), message: bind.message ?? "Worker 已绑定" });
+});
+
 app.post("/:id/refresh-ssl", async (c) => {
   const id = Number(c.req.param("id"));
   const db = getDb(c.env);
   const [row] = await db.select().from(domains).where(eq(domains.id, id)).limit(1);
   if (!row) return errorResponse("Not found", 404);
-  if (!row.cfCustomHostnameId) return errorResponse("No Cloudflare hostname id", 400);
+  if (!row.cfCustomHostnameId) {
+    return jsonResponse({
+      ...row,
+      setup: buildDomainSetupGuide(c.env, row.hostname),
+      message: "方案 A：SSL 由客户 Cloudflare 管理，请客户在控制台查看证书状态",
+    });
+  }
   const status = await getCustomHostnameStatus(c.env, row.cfCustomHostnameId);
   const sslStatus = mapSslStatus(status);
   const [updated] = await db.update(domains).set({ sslStatus, updatedAt: nowIso() }).where(eq(domains.id, id)).returning();
@@ -181,21 +221,31 @@ app.post("/:id/provision-ssl", async (c) => {
   const db = getDb(c.env);
   const [row] = await db.select().from(domains).where(eq(domains.id, id)).limit(1);
   if (!row) return errorResponse("Not found", 404);
-  if (row.cfCustomHostnameId) return errorResponse("Custom Hostname already exists", 400);
 
-  const cf = await createCustomHostname(c.env, row.hostname);
-  if (!cf.result) return errorResponse(cf.warning ?? "Failed to create Custom Hostname", 400);
+  const useSaas = c.req.query("mode") === "saas";
+  const provision = useSaas ? await provisionDomainSaas(c.env, row.hostname) : await provisionDomain(c.env, row.hostname);
+  if (!useSaas && provision.warnings.length && !provision.cfCustomHostnameId) {
+    const [updated] = await db
+      .update(domains)
+      .set({ sslStatus: provision.sslStatus, updatedAt: nowIso() })
+      .where(eq(domains.id, id))
+      .returning();
+    return jsonResponse({ ...updated, setup: provision.setup, warnings: provision.warnings });
+  }
+  if (!provision.cfCustomHostnameId && useSaas) {
+    return errorResponse(provision.warnings.join(" ") || "Failed to create Custom Hostname", 400);
+  }
 
   const [updated] = await db
     .update(domains)
     .set({
-      cfCustomHostnameId: cf.result.id,
-      sslStatus: mapSslStatus(cf.result.ssl.status),
+      cfCustomHostnameId: provision.cfCustomHostnameId,
+      sslStatus: provision.sslStatus,
       updatedAt: nowIso(),
     })
     .where(eq(domains.id, id))
     .returning();
-  return jsonResponse(updated);
+  return jsonResponse({ ...updated, setup: provision.setup, warnings: provision.warnings });
 });
 
 app.delete("/:id", async (c) => {

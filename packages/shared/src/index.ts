@@ -175,6 +175,17 @@ export interface DomainImportResult {
   warnings?: Array<{ hostname: string; message: string }>;
 }
 
+export type DomainKind = "platform_subdomain" | "customer_owned";
+
+export interface DomainSetupGuide {
+  kind: DomainKind;
+  hostname: string;
+  cnameTarget: string;
+  originTarget: string;
+  steps: string[];
+  note?: string;
+}
+
 export interface AuditLog {
   id: number;
   userId: number;

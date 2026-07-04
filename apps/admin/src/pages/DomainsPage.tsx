@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import type { DomainSetupGuide } from "@lp-admin/shared";
+import DomainSetupGuidePanel from "../components/DomainSetupGuide";
 import { api, formatRate } from "../lib/api";
+import { dnsTargetLabel, getDomainKind } from "../lib/domain-kind";
 
 interface DomainRow {
   id: number;
@@ -31,6 +34,7 @@ export default function DomainsPage() {
   const [csv, setCsv] = useState("");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [lastSetup, setLastSetup] = useState<DomainSetupGuide | null>(null);
 
   async function load() {
     const [domains, customerRows, productRows, lpRows] = await Promise.all([
@@ -52,7 +56,7 @@ export default function DomainsPage() {
     setError("");
     setMessage("");
     try {
-      const row = await api<DomainRow & { cfWarning?: string | null }>("/api/admin/domains", {
+      const row = await api<DomainRow & { setup?: DomainSetupGuide; warnings?: string[] }>("/api/admin/domains", {
         method: "POST",
         body: JSON.stringify({
           hostname: form.hostname,
@@ -62,12 +66,12 @@ export default function DomainsPage() {
         }),
       });
       setForm({ hostname: "", customerId: "", productId: "", landingPageId: "" });
-      if (row.cfWarning) {
-        setMessage(`域名 ${row.hostname} 已添加。${row.cfWarning}`);
-      } else if (!row.cfCustomHostnameId) {
-        setMessage(`域名 ${row.hostname} 已添加，但 Cloudflare SSL 未自动创建`);
+      if (row.setup) setLastSetup(row.setup);
+      const warnText = row.warnings?.length ? row.warnings.join(" ") : "";
+      if (row.setup?.kind === "platform_subdomain") {
+        setMessage(`子域 ${row.hostname} 已添加，Worker 自动绑定中。${warnText}`.trim());
       } else {
-        setMessage(`域名 ${row.hostname} 已添加，SSL 状态：${row.sslStatus}`);
+        setMessage(`客户域 ${row.hostname} 已添加。请发送 DNS 指引给客户。${warnText}`.trim());
       }
       await load();
     } catch (err) {
@@ -107,11 +111,22 @@ export default function DomainsPage() {
   async function refreshSsl(id: number) {
     setError("");
     try {
-      const row = await api<DomainRow>(`/api/admin/domains/${id}/refresh-ssl`, { method: "POST" });
-      setMessage(`${row.hostname} SSL 状态：${row.sslStatus}`);
+      const row = await api<DomainRow & { message?: string }>(`/api/admin/domains/${id}/refresh-ssl`, { method: "POST" });
+      setMessage(row.message ?? `${row.hostname} SSL 状态：${row.sslStatus}`);
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : "刷新失败");
+    }
+  }
+
+  async function bindWorker(id: number) {
+    setError("");
+    try {
+      const row = await api<DomainRow & { message?: string }>(`/api/admin/domains/${id}/bind-worker`, { method: "POST" });
+      setMessage(row.message ?? `${row.hostname} Worker 已绑定`);
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "绑定失败");
     }
   }
 
@@ -128,6 +143,13 @@ export default function DomainsPage() {
       <h1>域名管理</h1>
       {message ? <div className="notice" style={{ marginBottom: 12 }}>{message}</div> : null}
       {error ? <div className="error" style={{ marginBottom: 12 }}>{error}</div> : null}
+
+      {lastSetup ? (
+        <div className="panel" style={{ marginBottom: 16 }}>
+          <h2>刚添加的域名配置指引</h2>
+          <DomainSetupGuidePanel guide={lastSetup} />
+        </div>
+      ) : null}
 
       <div className="panel" style={{ marginBottom: 16 }}>
         <h2>添加域名</h2>
@@ -158,7 +180,7 @@ export default function DomainsPage() {
               <th>落地页</th>
               <th>状态</th>
               <th>SSL</th>
-              <th>CNAME</th>
+              <th>DNS 目标</th>
               <th>今日 PV</th>
               <th>今日 UV</th>
               <th>疑似机器人</th>
@@ -190,7 +212,7 @@ export default function DomainsPage() {
                   </select>
                 </td>
                 <td><span className={`badge ${row.sslStatus}`}>{row.sslStatus}</span></td>
-                <td><code>{row.cnameTarget}</code></td>
+                <td><code>{dnsTargetLabel(row.hostname)}</code></td>
                 <td>{row.todayStats.pageViews}</td>
                 <td>{row.todayStats.uniqueVisitors}</td>
                 <td>{row.todayStats.botPageViews ?? 0}</td>
@@ -198,14 +220,11 @@ export default function DomainsPage() {
                 <td>{formatRate(row.todayStats.conversionRate)}</td>
                 <td className="actions">
                   <Link className="btn btn-secondary" to={`/domains/${row.id}`}>详情</Link>
-                  <button
-                    className="btn btn-secondary"
-                    disabled={!row.cfCustomHostnameId}
-                    title={row.cfCustomHostnameId ? "刷新 SSL 状态" : "未创建 Custom Hostname"}
-                    onClick={() => refreshSsl(row.id)}
-                  >
-                    刷新 SSL
-                  </button>
+                  {getDomainKind(row.hostname) === "platform_subdomain" ? (
+                    <button className="btn btn-secondary" onClick={() => bindWorker(row.id)}>绑定 Worker</button>
+                  ) : (
+                    <button className="btn btn-secondary" onClick={() => refreshSsl(row.id)}>SSL 说明</button>
+                  )}
                   <button className="btn btn-secondary" onClick={() => deleteDomain(row.id, row.hostname)}>删除</button>
                 </td>
               </tr>

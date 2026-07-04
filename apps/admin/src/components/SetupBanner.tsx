@@ -1,12 +1,11 @@
 export default function SetupBanner() {
   return (
     <div className="notice">
-      <strong>下一步：开通 Cloudflare for SaaS</strong>
+      <strong>方案 A 已启用（Free + 客户自有 Cloudflare）</strong>
       <p style={{ margin: "8px 0 0", lineHeight: 1.6 }}>
-        • 平台登录 / 落地页 / 统计：已可用 ✅
-        <br />• 客户独立域名自动 SSL：需在 Cloudflare 开通 for SaaS（Custom Hostnames）
-        <br />• Fallback Origin：<code>origin.minishort.sbs</code> · 客户 CNAME 目标：<code>customers.minishort.sbs</code>
-        <br />• 详见仓库 <code>docs/NEXT-STEPS.md</code>
+        • 平台子域（如 <code>xxx.minishort.sbs</code>）：添加后自动绑定 Worker，无需 DNS ✅
+        <br />• 客户自有域：客户 CNAME 橙云 → <code>origin.minishort.sbs</code>，证书在客户 CF 自动签发
+        <br />• 发给客户的 DNS 说明见 <code>docs/CUSTOMER-DNS.md</code> · 管理员说明见 <code>docs/PLAN-A.md</code>
       </p>
     </div>
   );

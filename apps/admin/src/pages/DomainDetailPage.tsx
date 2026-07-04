@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import type { DomainStatsDaily, DownloadByPosition } from "@lp-admin/shared";
+import type { DomainSetupGuide, DomainStatsDaily, DownloadByPosition } from "@lp-admin/shared";
+import DomainSetupGuidePanel from "../components/DomainSetupGuide";
 import { api, defaultRange, formatRate } from "../lib/api";
+import { dnsTargetLabel, getDomainKind } from "../lib/domain-kind";
 
 interface DomainInfo {
   id: number;
@@ -13,6 +15,7 @@ interface DomainInfo {
   sslStatus: string;
   cfCustomHostnameId: string | null;
   cnameTarget: string;
+  setup?: DomainSetupGuide;
 }
 
 interface DomainStatsResponse {
@@ -68,15 +71,15 @@ export default function DomainDetailPage() {
     }
   }
 
-  async function provisionSsl() {
+  async function bindWorker() {
     if (!id) return;
     setError("");
     try {
-      const row = await api<DomainInfo>(`/api/admin/domains/${id}/provision-ssl`, { method: "POST" });
+      const row = await api<DomainInfo & { message?: string }>(`/api/admin/domains/${id}/bind-worker`, { method: "POST" });
       setDomain(row);
-      setMessage("已提交 Custom Hostname 创建请求");
+      setMessage(row.message ?? "Worker 已绑定");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "创建 SSL 失败");
+      setError(err instanceof Error ? err.message : "绑定失败");
     }
   }
 
@@ -98,10 +101,10 @@ export default function DomainDetailPage() {
           ) : null}
         </div>
         <div className="actions">
-          {!domain?.cfCustomHostnameId ? (
-            <button className="btn btn-secondary" onClick={provisionSsl}>创建 SSL</button>
+          {domain && getDomainKind(domain.hostname) === "platform_subdomain" ? (
+            <button className="btn btn-secondary" onClick={bindWorker}>重新绑定 Worker</button>
           ) : (
-            <button className="btn btn-secondary" onClick={refreshSsl}>刷新 SSL</button>
+            <button className="btn btn-secondary" onClick={refreshSsl}>查看 SSL 说明</button>
           )}
           {domain ? (
             <a className="btn btn-secondary" href={`https://${domain.hostname}`} target="_blank" rel="noreferrer">访问落地页</a>
@@ -112,11 +115,18 @@ export default function DomainDetailPage() {
       {message ? <div className="notice" style={{ marginBottom: 12 }}>{message}</div> : null}
       {error ? <div className="error" style={{ marginBottom: 12 }}>{error}</div> : null}
 
+      {domain?.setup ? (
+        <div className="panel" style={{ marginBottom: 16 }}>
+          <h2>域名配置指引</h2>
+          <DomainSetupGuidePanel guide={domain.setup} />
+        </div>
+      ) : null}
+
       {domain ? (
         <div className="card-grid" style={{ marginBottom: 16 }}>
           <div className="card"><div className="label">状态</div><div className="value" style={{ fontSize: 18 }}>{domain.status}</div></div>
           <div className="card"><div className="label">SSL</div><div className="value" style={{ fontSize: 18 }}><span className={`badge ${domain.sslStatus}`}>{domain.sslStatus}</span></div></div>
-          <div className="card"><div className="label">CNAME 目标</div><div className="value" style={{ fontSize: 16 }}><code>{domain.cnameTarget}</code></div></div>
+          <div className="card"><div className="label">DNS 目标</div><div className="value" style={{ fontSize: 16 }}><code>{dnsTargetLabel(domain.hostname, domain.setup?.originTarget)}</code></div></div>
         </div>
       ) : null}
 
