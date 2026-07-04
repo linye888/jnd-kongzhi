@@ -51,7 +51,13 @@ button, input, select, textarea { font: inherit; }
 .login-box { width: min(100%, 420px); background: var(--panel); border: 1px solid var(--line); border-radius: 24px; padding: 28px; box-shadow: var(--shadow); }
 .muted { color: var(--muted); }
 .error { color: #fecaca; background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.25); padding: 10px 12px; border-radius: 12px; }
-.filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+.filters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; align-items: center; }
+.period-tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.period-tabs .btn.period-active {
+  background: linear-gradient(135deg, var(--primary), var(--primary-2));
+  color: white;
+  border-color: transparent;
+}
 .form-grid h2 { margin: 18px 0 4px; font-size: 16px; color: var(--gold); }
 .notice { border: 1px solid rgba(255, 211, 61, 0.25); background: rgba(255, 211, 61, 0.08); border-radius: 14px; padding: 14px 16px; margin-bottom: 16px; }
 .notice strong { color: var(--gold); }

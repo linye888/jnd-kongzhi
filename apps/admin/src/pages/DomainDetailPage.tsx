@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { DomainSetupGuide, DomainStatsDaily, DownloadByPosition } from "@lp-admin/shared";
-import { api, defaultRange, formatRate } from "../lib/api";
+import { api, formatRate } from "../lib/api";
+import StatsPeriodFilter, { rangeForPeriod } from "../components/StatsPeriodFilter";
+import { detectPeriod } from "../lib/date-range";
 
 interface DomainInfo {
   id: number;
@@ -34,7 +36,7 @@ const positionLabels: Record<keyof DownloadByPosition, string> = {
 
 export default function DomainDetailPage() {
   const { id } = useParams();
-  const initial = defaultRange(14);
+  const initial = rangeForPeriod("week");
   const [from, setFrom] = useState(initial.from);
   const [to, setTo] = useState(initial.to);
   const [domain, setDomain] = useState<DomainInfo | null>(null);
@@ -86,10 +88,20 @@ export default function DomainDetailPage() {
         </div>
       ) : null}
 
-      <div className="filters">
-        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-        <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-      </div>
+      <StatsPeriodFilter
+        period={detectPeriod(from, to)}
+        from={from}
+        to={to}
+        onPeriodChange={(next) => {
+          const range = rangeForPeriod(next);
+          setFrom(range.from);
+          setTo(range.to);
+        }}
+        onCustomChange={(nextFrom, nextTo) => {
+          setFrom(nextFrom);
+          setTo(nextTo);
+        }}
+      />
 
       <div className="card-grid">
         <div className="card"><div className="label">真实访问 (PV)</div><div className="value">{summary?.pageViews ?? 0}</div></div>

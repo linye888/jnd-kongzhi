@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
-import { api, defaultRange, formatRate } from "../lib/api";
+import { api, formatRate } from "../lib/api";
+import StatsPeriodFilter, { rangeForPeriod } from "../components/StatsPeriodFilter";
+import type { StatsPeriod } from "../lib/date-range";
+import { detectPeriod } from "../lib/date-range";
 
 interface Overview {
   totals: {
@@ -23,19 +26,42 @@ interface Overview {
 }
 
 export default function DashboardPage() {
+  const [from, setFrom] = useState(rangeForPeriod("week").from);
+  const [to, setTo] = useState(rangeForPeriod("week").to);
   const [data, setData] = useState<Overview | null>(null);
-  const range = defaultRange(7);
 
   useEffect(() => {
-    api<Overview>(`/api/admin/stats/overview?from=${range.from}&to=${range.to}&groupBy=domain`).then(setData).catch(console.error);
-  }, []);
+    api<Overview>(`/api/admin/stats/overview?from=${from}&to=${to}&groupBy=domain`).then(setData).catch(console.error);
+  }, [from, to]);
+
+  function onPeriodChange(next: StatsPeriod) {
+    const range = rangeForPeriod(next);
+    setFrom(range.from);
+    setTo(range.to);
+  }
+
+  function onCustomChange(nextFrom: string, nextTo: string) {
+    setFrom(nextFrom);
+    setTo(nextTo);
+  }
 
   const totals = data?.totals;
+  const activePeriod = detectPeriod(from, to);
+  const periodLabel = activePeriod ? rangeForPeriod(activePeriod).label : `${from} ~ ${to}`;
 
   return (
     <div>
       <h1>Dashboard</h1>
-      <p className="muted">近 7 天真实用户数据（已过滤大部分爬虫）</p>
+      <p className="muted">{periodLabel}真实用户数据（已过滤大部分爬虫）</p>
+
+      <StatsPeriodFilter
+        period={activePeriod}
+        from={from}
+        to={to}
+        onPeriodChange={onPeriodChange}
+        onCustomChange={onCustomChange}
+      />
+
       <div className="card-grid">
         <div className="card"><div className="label">真实访问 (PV)</div><div className="value">{totals?.pageViews ?? "-"}</div></div>
         <div className="card"><div className="label">真实用户 (UV)</div><div className="value">{totals?.uniqueVisitorsDeduped ?? "-"}</div></div>

@@ -3,6 +3,7 @@ import type { StatsGroupBy } from "@lp-admin/shared";
 import type { Env } from "../../env";
 import { authMiddleware } from "../../middleware/auth";
 import { getDomainStats, getOverviewStats } from "../../lib/stats";
+import { getStatsStorageSummary, previewStatsPurge, purgeHistoricalStats, type StatsPurgeInput } from "../../lib/stats-purge";
 import { jsonResponse, errorResponse } from "../../lib/utils";
 
 const app = new Hono<{ Bindings: Env }>();
@@ -13,6 +14,26 @@ function getRange(c: { req: { query: (k: string) => string | undefined } }) {
   const from = c.req.query("from") ?? new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10);
   return { from, to };
 }
+
+app.get("/storage", async (c) => jsonResponse(await getStatsStorageSummary(c.env)));
+
+app.post("/purge/preview", async (c) => {
+  try {
+    const body = await c.req.json<StatsPurgeInput>();
+    return jsonResponse(await previewStatsPurge(c.env, body));
+  } catch (error) {
+    return errorResponse(error instanceof Error ? error.message : "预览失败", 400);
+  }
+});
+
+app.post("/purge", async (c) => {
+  try {
+    const body = await c.req.json<StatsPurgeInput>();
+    return jsonResponse(await purgeHistoricalStats(c.env, body));
+  } catch (error) {
+    return errorResponse(error instanceof Error ? error.message : "删除失败", 400);
+  }
+});
 
 app.get("/overview", async (c) => {
   const { from, to } = getRange(c);
