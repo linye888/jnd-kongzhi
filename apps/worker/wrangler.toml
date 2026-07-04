@@ -13,6 +13,18 @@ FALLBACK_ORIGIN = "origin.minishort.sbs"
 [triggers]
 crons = ["0 * * * *"]
 
+[[routes]]
+pattern = "minishort.sbs/*"
+zone_name = "minishort.sbs"
+
+[[routes]]
+pattern = "www.minishort.sbs/*"
+zone_name = "minishort.sbs"
+
+[[routes]]
+pattern = "origin.minishort.sbs/*"
+zone_name = "minishort.sbs"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "lp-admin-db"

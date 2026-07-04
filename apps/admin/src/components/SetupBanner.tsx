@@ -5,12 +5,11 @@ export default function SetupBanner() {
     <div className="notice">
       <strong>待完成配置（需 Cloudflare DNS 权限）：</strong>
       <p style={{ margin: "8px 0 0", lineHeight: 1.6 }}>
-        在 <code>minishort.sbs</code> DNS 添加：
-        <br />• <code>admin</code> CNAME → <code>lp-admin-6rt.pages.dev</code>（管理后台）
-        <br />• <code>origin</code> CNAME → <code>lp-admin-worker.ceddnabby.workers.dev</code>（Fallback Origin）
-        <br />• <code>customers</code> CNAME → Cloudflare SaaS 目标（for SaaS 开通后）
-        <br />API Token 还需 Zone 权限：<code>DNS Edit</code> + <code>SSL and Certificates Edit</code>
-        <br />请尽快 <Link to="/users" style={{ color: "var(--mint)" }}>修改默认管理员密码</Link>
+        在 <code>minishort.sbs</code> DNS：
+        <br />• <code>admin</code> CNAME → <code>lp-admin-6rt.pages.dev</code> ✅ 已完成
+        <br />• <code>minishort.sbs</code> / <code>origin</code>：<strong>不要</strong> CNAME 到 workers.dev（会 522）
+        <br />• 请到 Workers → lp-admin-worker → 设置 → 域和路由 → 添加自定义域
+        <br />for SaaS 可在控制台手动操作，<strong>不强制需要 API Token 权限</strong>
       </p>
     </div>
   );
