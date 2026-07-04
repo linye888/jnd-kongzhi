@@ -1,7 +1,13 @@
-const API_BASE = import.meta.env.VITE_API_BASE ?? "";
+const FALLBACK_API_BASE = "https://minishort.sbs";
+const CONFIGURED_API_BASE = import.meta.env.VITE_API_BASE ?? "";
+
+function apiBaseCandidates(): string[] {
+  const bases = [CONFIGURED_API_BASE, FALLBACK_API_BASE].filter(Boolean);
+  return [...new Set(bases)];
+}
 
 export function getApiBase() {
-  return API_BASE;
+  return CONFIGURED_API_BASE || FALLBACK_API_BASE;
 }
 
 export function getToken(): string | null {
@@ -19,22 +25,32 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const token = getToken();
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const url = `${API_BASE}${path}`;
+  let lastError: Error | null = null;
+  for (const base of apiBaseCandidates()) {
+    try {
+      const data = await requestOnce<T>(base, path, { ...init, headers });
+      return data;
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      if (apiBaseCandidates().length === 1) break;
+    }
+  }
+  throw lastError ?? new Error("无法连接 API");
+}
+
+async function requestOnce<T>(base: string, path: string, init: RequestInit): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(url, { ...init, headers });
+    response = await fetch(`${base}${path}`, init);
   } catch {
-    const hint = API_BASE
-      ? `无法连接 API（${API_BASE}），请确认 Worker 自定义域可用且非 workers.dev`
-      : "未配置 VITE_API_BASE，请在构建时设置 API 地址（如 https://minishort.sbs）";
-    throw new Error(hint);
+    throw new Error(`无法连接 API（${base}）`);
   }
 
   let payload: { success?: boolean; data?: T; error?: string };
   try {
     payload = await response.json();
   } catch {
-    throw new Error(`API 返回异常（HTTP ${response.status}），请检查 ${API_BASE || "API 地址"} 是否正确`);
+    throw new Error(`API 返回异常（HTTP ${response.status}，${base}）`);
   }
   if (!response.ok || payload.success === false) {
     throw new Error(payload.error ?? `请求失败（HTTP ${response.status}）`);
@@ -53,5 +69,5 @@ export function defaultRange(days = 7) {
 }
 
 export function previewUrl(landingPageId: number) {
-  return `${API_BASE}/api/admin/landing-pages/${landingPageId}/preview`;
+  return `${getApiBase()}/api/admin/landing-pages/${landingPageId}/preview`;
 }
