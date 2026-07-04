@@ -25,6 +25,7 @@ interface DomainRow {
 interface DomainDraft {
   downloadUrl: string;
   pixelId: string;
+  templateKey: string;
 }
 
 interface DomainHealth {
@@ -89,7 +90,9 @@ export default function DomainsPage() {
     const domains = await api<DomainRow[]>("/api/admin/domains");
     setRows(domains);
     setDrafts(
-      Object.fromEntries(domains.map((d) => [d.id, { downloadUrl: d.downloadUrl, pixelId: d.pixelId }])),
+      Object.fromEntries(
+        domains.map((d) => [d.id, { downloadUrl: d.downloadUrl, pixelId: d.pixelId, templateKey: d.templateKey }]),
+      ),
     );
     return domains;
   }
@@ -171,20 +174,52 @@ export default function DomainsPage() {
 
   async function saveRow(id: number) {
     const draft = drafts[id];
-    if (!draft) return;
+    const row = rows.find((item) => item.id === id);
+    if (!draft || !row) return;
     setSavingId(id);
     setError("");
     try {
+      const payload: Record<string, string | boolean> = {
+        downloadUrl: draft.downloadUrl,
+        pixelId: draft.pixelId,
+      };
+      if (draft.templateKey !== row.templateKey) {
+        payload.templateId = draft.templateKey;
+      }
       await api(`/api/admin/domains/${id}`, {
         method: "PUT",
-        body: JSON.stringify({ downloadUrl: draft.downloadUrl, pixelId: draft.pixelId }),
+        body: JSON.stringify(payload),
       });
-      setMessage("已保存");
-      await load();
+      setMessage(draft.templateKey !== row.templateKey ? "模板与链接已保存" : "已保存");
+      const domains = await load();
+      await runHealthCheck([id]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "保存失败");
     } finally {
       setSavingId(null);
+    }
+  }
+
+  function onRowTemplateChange(id: number, templateId: string, row: DomainRow) {
+    const template = templates.find((item) => item.id === templateId);
+    const current = drafts[id] ?? { downloadUrl: row.downloadUrl, pixelId: row.pixelId, templateKey: row.templateKey };
+    if (templateId === row.templateKey) {
+      setDraft(id, { ...current, templateKey: templateId });
+      return;
+    }
+    const useDefaults = template
+      ? confirm(
+          `更换为「${template.name}」\n\n确定 = 同时使用该模板的默认下载链接和 Pixel\n取消 = 仅更换页面文案，保留当前链接和 Pixel`,
+        )
+      : false;
+    if (useDefaults && template) {
+      setDraft(id, {
+        templateKey: templateId,
+        downloadUrl: template.defaultDownloadUrl,
+        pixelId: template.defaultPixelId,
+      });
+    } else {
+      setDraft(id, { ...current, templateKey: templateId });
     }
   }
 
@@ -299,9 +334,15 @@ export default function DomainsPage() {
           </thead>
           <tbody>
             {rows.map((row) => {
-              const draft = drafts[row.id] ?? { downloadUrl: row.downloadUrl, pixelId: row.pixelId };
+              const draft = drafts[row.id] ?? {
+                downloadUrl: row.downloadUrl,
+                pixelId: row.pixelId,
+                templateKey: row.templateKey,
+              };
               const dirty =
-                draft.downloadUrl !== row.downloadUrl || draft.pixelId !== row.pixelId;
+                draft.downloadUrl !== row.downloadUrl
+                || draft.pixelId !== row.pixelId
+                || draft.templateKey !== row.templateKey;
               return (
                 <tr key={row.id}>
                   <td>
@@ -313,7 +354,17 @@ export default function DomainsPage() {
                       SSL: <span className={`badge ${row.sslStatus}`}>{row.sslStatus}</span>
                     </div>
                   </td>
-                  <td>{row.templateName}</td>
+                  <td>
+                    <select
+                      className="table-input table-input-template"
+                      value={draft.templateKey}
+                      onChange={(e) => onRowTemplateChange(row.id, e.target.value, row)}
+                    >
+                      {templates.map((item) => (
+                        <option key={item.id} value={item.id}>{item.name}</option>
+                      ))}
+                    </select>
+                  </td>
                   <td>
                     <input
                       className="table-input"

@@ -6,8 +6,10 @@ import { authMiddleware } from "../../middleware/auth";
 import { buildDomainSetupGuide, bindPlatformWorkerDomain } from "../../lib/domain-setup";
 import { getCustomHostnameStatus, mapSslStatus } from "../../lib/cf";
 import {
+  applyLandingTemplate,
   createLandingPageForDomain,
   ensureDefaultTenant,
+  isLandingTemplateId,
   updateLandingPageFields,
 } from "../../lib/landing-page-factory";
 import { provisionDomain, provisionDomainSaas } from "../../lib/provision-domain";
@@ -175,14 +177,32 @@ app.post("/", async (c) => {
 
 app.put("/:id", async (c) => {
   const id = Number(c.req.param("id"));
-  const body = await c.req.json<{ downloadUrl?: string; pixelId?: string; status?: string }>();
+  const body = await c.req.json<{
+    downloadUrl?: string;
+    pixelId?: string;
+    status?: string;
+    templateId?: string;
+    useTemplateDefaults?: boolean;
+  }>();
   const db = getDb(c.env);
   const ts = nowIso();
   const [existing] = await db.select().from(domains).where(eq(domains.id, id)).limit(1);
   if (!existing) return errorResponse("Not found", 404);
 
-  if (body.downloadUrl !== undefined || body.pixelId !== undefined) {
-    await updateLandingPageFields(db, existing.landingPageId, {
+  let lp;
+  if (body.templateId !== undefined) {
+    if (!isLandingTemplateId(body.templateId)) return errorResponse("无效的模板", 400);
+    try {
+      lp = await applyLandingTemplate(db, existing.landingPageId, body.templateId, {
+        downloadUrl: body.downloadUrl,
+        pixelId: body.pixelId,
+        useTemplateDefaults: body.useTemplateDefaults,
+      });
+    } catch (error) {
+      return errorResponse(error instanceof Error ? error.message : "更换模板失败", 400);
+    }
+  } else if (body.downloadUrl !== undefined || body.pixelId !== undefined) {
+    lp = await updateLandingPageFields(db, existing.landingPageId, {
       downloadUrl: body.downloadUrl?.trim(),
       pixelId: body.pixelId?.trim(),
     });
@@ -197,12 +217,16 @@ app.put("/:id", async (c) => {
     .where(eq(domains.id, id))
     .returning();
 
-  const [lp] = await db.select().from(landingPages).where(eq(landingPages.id, existing.landingPageId)).limit(1);
+  if (!lp) {
+    [lp] = await db.select().from(landingPages).where(eq(landingPages.id, existing.landingPageId)).limit(1);
+  }
   await invalidateDomainCache(c.env, existing.hostname);
   return jsonResponse({
     ...row,
     downloadUrl: lp?.downloadUrl ?? "",
     pixelId: lp?.pixelId ?? "",
+    templateKey: lp?.templateKey ?? "india-en",
+    templateName: lp?.name ?? "Mini Short - 印度英语",
   });
 });
 

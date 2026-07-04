@@ -103,4 +103,70 @@ export async function updateLandingPageFields(
   return row;
 }
 
+export async function applyLandingTemplate(
+  db: Db,
+  landingPageId: number,
+  templateId: string,
+  fields?: { downloadUrl?: string; pixelId?: string; useTemplateDefaults?: boolean },
+) {
+  if (!isLandingTemplateId(templateId)) {
+    throw new Error("无效的模板");
+  }
+
+  const [existing] = await db.select().from(landingPages).where(eq(landingPages.id, landingPageId)).limit(1);
+  if (!existing) throw new Error("Landing page not found");
+
+  const template = getLandingTemplate(templateId);
+  const preset = template.preset;
+  const ts = nowIso();
+  const downloadUrl = fields?.useTemplateDefaults
+    ? preset.downloadUrl
+    : (fields?.downloadUrl?.trim() ?? existing.downloadUrl);
+  const pixelId = fields?.useTemplateDefaults
+    ? preset.pixelId
+    : (fields?.pixelId?.trim() ?? existing.pixelId);
+
+  const [row] = await db
+    .update(landingPages)
+    .set({
+      name: template.name,
+      templateKey: template.id,
+      locale: preset.locale,
+      status: preset.status,
+      pageTitle: preset.pageTitle,
+      metaDescription: preset.metaDescription,
+      brandName: preset.brandName,
+      brandSubtitle: preset.brandSubtitle,
+      logoUrl: preset.logoUrl,
+      bannerUrl: preset.bannerUrl,
+      rewardText: preset.rewardText,
+      downloadUrl,
+      pixelId,
+      leadStorageKey: preset.leadStorageKey,
+      heroTag: preset.heroTag,
+      heroTitle: preset.heroTitle,
+      heroDescription: preset.heroDescription,
+      heroCtaText: preset.heroCtaText,
+      securityBadgeText: preset.securityBadgeText,
+      dramasSectionTitle: preset.dramasSectionTitle,
+      dramasSectionSubtitle: preset.dramasSectionSubtitle,
+      dramasJson: JSON.stringify(preset.dramas),
+      installGuideTitle: preset.installGuideTitle,
+      installGuideSubtitle: preset.installGuideSubtitle,
+      installStepsJson: JSON.stringify(preset.installSteps),
+      finalTitle: preset.finalTitle,
+      finalDescription: preset.finalDescription,
+      finalCtaText: preset.finalCtaText,
+      footerText: preset.footerText,
+      modalTitlePrefix: preset.modalTitlePrefix,
+      modalDescription: preset.modalDescription,
+      modalCtaText: preset.modalCtaText,
+      modalCancelText: preset.modalCancelText,
+      updatedAt: ts,
+    })
+    .where(eq(landingPages.id, landingPageId))
+    .returning();
+  return row;
+}
+
 export { listLandingTemplateOptions, getLandingTemplate, isLandingTemplateId };

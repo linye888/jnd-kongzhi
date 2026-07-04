@@ -76,6 +76,8 @@ button, input, select, textarea { font: inherit; }
   font-size: 13px;
 }
 .table-domains .table-input-short { min-width: 120px; }
+.table-domains .table-input-template { min-width: 160px; }
+.table-domains select.table-input { padding-right: 28px; }
 .table-domains td { vertical-align: top; }
 .health-dot {
   display: inline-block;
