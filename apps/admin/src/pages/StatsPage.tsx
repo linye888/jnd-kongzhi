@@ -198,6 +198,7 @@ export default function StatsPage() {
               <th>真实 UV</th>
               <th>疑似机器人 PV</th>
               <th>下载</th>
+              <th>独立下载用户</th>
               <th>转化率</th>
             </tr>
           </thead>
@@ -209,6 +210,7 @@ export default function StatsPage() {
                 <td>{item.uniqueVisitors}</td>
                 <td><span className="badge pending">{item.botPageViews}</span></td>
                 <td>{item.downloadCount}</td>
+                <td>{item.uniqueDownloaders}</td>
                 <td>{formatRate(item.conversionRate)}</td>
               </tr>
             ))}
