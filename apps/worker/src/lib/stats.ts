@@ -407,20 +407,27 @@ async function buildGroupItems(
     .sort((a, b) => b.downloadCount - a.downloadCount || b.pageViews - a.pageViews);
 }
 
+export async function refreshTodayAggregatesForDomains(env: Env, domainIds: number[]) {
+  if (domainIds.length === 0) return;
+  const today = todayUtc();
+  for (const domainId of domainIds) {
+    await aggregateDomainDay(env, domainId, today);
+  }
+}
+
 export async function refreshTodayAggregates(env: Env) {
   const db = getDb(env);
   const allDomains = await db.select({ id: domains.id }).from(domains);
-  const today = todayUtc();
-  for (const domain of allDomains) {
-    await aggregateDomainDay(env, domain.id, today);
-  }
+  await refreshTodayAggregatesForDomains(
+    env,
+    allDomains.map((domain) => domain.id),
+  );
 }
 
 export async function getTodaySummaryForDomains(env: Env, domainIds: number[]) {
   const db = getDb(env);
   if (domainIds.length === 0) return new Map<number, DomainStatsSummary>();
   const today = todayUtc();
-  await refreshTodayAggregates(env);
   const rows = await db.select().from(domainStatsDaily).where(and(inArray(domainStatsDaily.domainId, domainIds), eq(domainStatsDaily.statDate, today)));
   const map = new Map<number, DomainStatsSummary>();
   for (const row of rows) {

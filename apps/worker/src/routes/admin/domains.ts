@@ -15,7 +15,7 @@ import {
 import { provisionDomain, provisionDomainSaas } from "../../lib/provision-domain";
 import { invalidateDomainCache } from "../../lib/domains";
 import { checkDomainHealth, checkDomainsHealth } from "../../lib/domain-health";
-import { getTodaySummaryForDomains } from "../../lib/stats";
+import { getTodaySummaryForDomains, refreshTodayAggregatesForDomains } from "../../lib/stats";
 import { getDb, jsonResponse, errorResponse, nowIso, normalizeHostname } from "../../lib/utils";
 
 const app = new Hono<{ Bindings: Env }>();
@@ -38,14 +38,21 @@ const domainSelect = {
 };
 
 app.get("/", async (c) => {
+  const lite = c.req.query("lite") === "1";
   const db = getDb(c.env);
   const rows = await db
-    .select(domainSelect)
+    .select(lite ? { id: domains.id, hostname: domains.hostname } : domainSelect)
     .from(domains)
     .leftJoin(landingPages, eq(domains.landingPageId, landingPages.id))
     .orderBy(domains.id);
 
-  const statsMap = await getTodaySummaryForDomains(c.env, rows.map((r) => r.id));
+  if (lite) {
+    return jsonResponse(rows);
+  }
+
+  const domainIds = rows.map((row) => row.id);
+  const statsMap = await getTodaySummaryForDomains(c.env, domainIds);
+  c.executionCtx.waitUntil(refreshTodayAggregatesForDomains(c.env, domainIds));
   const enriched = rows.map((row) => ({
     ...row,
     downloadUrl: row.downloadUrl ?? "",
