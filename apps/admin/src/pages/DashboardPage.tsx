@@ -81,6 +81,7 @@ export default function DashboardPage() {
               <th>真实 UV</th>
               <th>疑似机器人</th>
               <th>下载</th>
+              <th>独立下载用户</th>
               <th>转化率</th>
             </tr>
           </thead>
@@ -92,6 +93,7 @@ export default function DashboardPage() {
                 <td>{item.uniqueVisitors}</td>
                 <td>{item.botPageViews}</td>
                 <td>{item.downloadCount}</td>
+                <td>{item.uniqueDownloaders}</td>
                 <td>{formatRate(item.conversionRate)}</td>
               </tr>
             ))}
