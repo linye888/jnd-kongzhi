@@ -25,6 +25,14 @@ zone_name = "minishort.sbs"
 pattern = "origin.minishort.sbs/*"
 zone_name = "minishort.sbs"
 
+[[routes]]
+pattern = "minishort.top/*"
+zone_name = "minishort.top"
+
+[[routes]]
+pattern = "www.minishort.top/*"
+zone_name = "minishort.top"
+
 [[d1_databases]]
 binding = "DB"
 database_name = "lp-admin-db"

@@ -11,8 +11,17 @@ const platformSteps = [
   "Facebook 广告落地页填：https://你的子域名.minishort.sbs",
 ];
 
+const sameAccountSteps = [
+  "若域名和 minishort.sbs 在同一个 Cloudflare 账号（如 minishort.top），不要用 CNAME → origin",
+  "删除 @ / www 指向 origin.minishort.sbs 的 CNAME 记录",
+  "在 Cloudflare → Workers → lp-admin-worker → 域和路由 → 添加自定义域：minishort.top 和 www.minishort.top",
+  "Cloudflare 会自动创建 DNS 并签发证书",
+  "在后台「域名管理」添加 minishort.top + 模板 + 下载链接 + Pixel",
+  "访问 https://minishort.top 测试",
+];
+
 const customSteps = [
-  "将域名（如 minishort.top）接入 Cloudflare，等待 NS 生效",
+  "将域名接入 Cloudflare（与 minishort.sbs 不同账号时适用），等待 NS 生效",
   `在 DNS 添加 CNAME：@ 或 www → ${ORIGIN_TARGET}，开启橙云 ☁️`,
   "SSL/TLS 模式选「灵活」或「完全」，等待证书生效（约 5～15 分钟）",
   "回到本后台「域名管理」，添加相同 hostname + 模板 + 下载链接 + Pixel",
@@ -65,13 +74,10 @@ export default function DomainGuidePage() {
         </div>
 
         <div className="panel guide-card">
-          <h2>方式 B：自有域名</h2>
-          <p className="muted">适合品牌独立域名，需先在 Cloudflare 配 DNS</p>
-          <p>
-            示例：<code>minishort.top</code> · <code>www.minishort.top</code> · <code>ad.minishort.top</code>
-          </p>
+          <h2>方式 B：同账号自有域名</h2>
+          <p className="muted">域名和 minishort.sbs 在同一个 Cloudflare 账号（如 minishort.top）</p>
           <ol className="guide-steps">
-            {customSteps.map((step) => (
+            {sameAccountSteps.map((step) => (
               <li key={step}>{step}</li>
             ))}
           </ol>
@@ -79,7 +85,19 @@ export default function DomainGuidePage() {
       </div>
 
       <div className="panel" style={{ marginTop: 16 }}>
-        <h2 style={{ marginTop: 0 }}>自有域名 DNS 配置（Cloudflare）</h2>
+        <h2 style={{ marginTop: 0 }}>方式 C：外部账号自有域名（CNAME 方案）</h2>
+        <p className="muted" style={{ marginTop: 0 }}>
+          仅当域名在<strong>另一个</strong> Cloudflare 账号时使用 CNAME → <code>{ORIGIN_TARGET}</code>。同账号不要用此方式，否则会 522。
+        </p>
+        <ol className="guide-steps">
+          {customSteps.map((step) => (
+            <li key={step}>{step}</li>
+          ))}
+        </ol>
+      </div>
+
+      <div className="panel" style={{ marginTop: 16 }}>
+        <h2 style={{ marginTop: 0 }}>外部账号 DNS 配置（CNAME）</h2>
         <p className="muted" style={{ marginTop: 0 }}>
           CNAME 目标必须为 <code>{ORIGIN_TARGET}</code>，且必须开启代理（橙云 ☁️）。不要用 *.workers.dev，否则会 522。
         </p>
@@ -156,8 +174,13 @@ export default function DomainGuidePage() {
         <dl className="guide-faq">
           <dt>minishort.top 和 minishort.sbs 有什么区别？</dt>
           <dd>
-            <code>*.minishort.sbs</code> 是平台子域，后台添加后自动绑定；<code>minishort.top</code> 等自有域名需先 CNAME 到{" "}
-            <code>{ORIGIN_TARGET}</code>，再在后台添加。
+            <code>*.minishort.sbs</code> 是平台子域，后台添加后自动绑定。
+            <code>minishort.top</code> 与 minishort.sbs 在同一 Cloudflare 账号时，应直接绑定 Worker 自定义域，<strong>不要</strong> CNAME 到 origin。
+          </dd>
+          <dt>为什么 CNAME 到 origin 会 522？</dt>
+          <dd>
+            同账号域名 CNAME 到 origin.minishort.sbs 时，Cloudflare 不会把外部 Host 转给 Worker（需 SSL for SaaS 套餐）。
+            正确做法：Workers → lp-admin-worker → 添加自定义域。
           </dd>
           <dt>修改一个域名的下载链接会影响其他域名吗？</dt>
           <dd>不会。每个域名有独立落地页配置，保存时只影响当前域名。</dd>
