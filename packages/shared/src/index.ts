@@ -194,6 +194,9 @@ export interface LandingTemplateOption {
   defaultDownloadUrl: string;
   defaultPixelId: string;
   rewardText: string;
+  facebookAdHeadline: string;
+  facebookAdPrimaryText: string;
+  facebookAdDescription: string;
 }
 
 export interface AuditLog {
