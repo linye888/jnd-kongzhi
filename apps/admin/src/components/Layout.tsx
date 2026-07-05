@@ -3,6 +3,7 @@ import { useAuth } from "../lib/auth";
 
 const links = [
   { to: "/", label: "Dashboard" },
+  { to: "/domains/guide", label: "添加域名" },
   { to: "/domains", label: "域名管理" },
   { to: "/stats", label: "数据统计" },
 ];
@@ -16,7 +17,7 @@ export default function Layout() {
         <div className="brand">LP Admin</div>
         <nav className="nav">
           {links.map((link) => (
-            <NavLink key={link.to} to={link.to} end={link.to === "/"}>
+            <NavLink key={link.to} to={link.to} end={link.to === "/" || link.to === "/domains"}>
               {link.label}
             </NavLink>
           ))}

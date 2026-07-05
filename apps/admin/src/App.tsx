@@ -5,6 +5,7 @@ import LoginPage from "./pages/LoginPage";
 import DashboardPage from "./pages/DashboardPage";
 import StatsPage from "./pages/StatsPage";
 import DomainsPage from "./pages/DomainsPage";
+import DomainGuidePage from "./pages/DomainGuidePage";
 import DomainDetailPage from "./pages/DomainDetailPage";
 
 function Protected({ children }: { children: React.ReactNode }) {
@@ -29,6 +30,7 @@ export default function App() {
         >
           <Route index element={<DashboardPage />} />
           <Route path="stats" element={<StatsPage />} />
+          <Route path="domains/guide" element={<DomainGuidePage />} />
           <Route path="domains/:id" element={<DomainDetailPage />} />
           <Route path="domains" element={<DomainsPage />} />
           <Route path="*" element={<Navigate to="/domains" replace />} />

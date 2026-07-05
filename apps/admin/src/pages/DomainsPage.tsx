@@ -245,8 +245,15 @@ export default function DomainsPage() {
 
   return (
     <div>
-      <h1>域名管理</h1>
-      <p className="muted">选择落地页模板，添加域名后修改下载链接和 Pixel ID 即可投放</p>
+      <div className="topbar" style={{ marginBottom: 12 }}>
+        <div>
+          <h1 style={{ margin: 0 }}>域名管理</h1>
+          <p className="muted" style={{ margin: "8px 0 0" }}>
+            选择落地页模板，添加域名后修改下载链接和 Pixel ID 即可投放 ·{" "}
+            <Link className="link" to="/domains/guide">查看添加引导</Link>
+          </p>
+        </div>
+      </div>
 
       {message ? <div className="notice" style={{ marginBottom: 12 }}>{message}</div> : null}
       {error ? <div className="error" style={{ marginBottom: 12 }}>{error}</div> : null}
