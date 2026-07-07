@@ -420,7 +420,8 @@ export async function getTodaySummaryForDomains(env: Env, domainIds: number[]) {
   const db = getDb(env);
   if (domainIds.length === 0) return new Map<number, DomainStatsSummary>();
   const today = todayUtc();
-  await refreshTodayAggregates(env);
+  // Read pre-aggregated rows only. Events update domain_stats_daily on ingest;
+  // full refresh runs on the scheduled worker cron, not on every admin list load.
   const rows = await db.select().from(domainStatsDaily).where(and(inArray(domainStatsDaily.domainId, domainIds), eq(domainStatsDaily.statDate, today)));
   const map = new Map<number, DomainStatsSummary>();
   for (const row of rows) {

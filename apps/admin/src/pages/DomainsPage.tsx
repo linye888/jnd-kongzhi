@@ -85,16 +85,22 @@ export default function DomainsPage() {
   const [error, setError] = useState("");
   const [lastSetup, setLastSetup] = useState<DomainSetupGuide | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  async function load() {
-    const domains = await api<DomainRow[]>("/api/admin/domains");
-    setRows(domains);
-    setDrafts(
-      Object.fromEntries(
-        domains.map((d) => [d.id, { downloadUrl: d.downloadUrl, pixelId: d.pixelId, templateKey: d.templateKey }]),
-      ),
-    );
-    return domains;
+  async function load(silent = false) {
+    if (!silent) setLoading(true);
+    try {
+      const domains = await api<DomainRow[]>("/api/admin/domains");
+      setRows(domains);
+      setDrafts(
+        Object.fromEntries(
+          domains.map((d) => [d.id, { downloadUrl: d.downloadUrl, pixelId: d.pixelId, templateKey: d.templateKey }]),
+        ),
+      );
+      return domains;
+    } finally {
+      if (!silent) setLoading(false);
+    }
   }
 
   async function runHealthCheck(ids?: number[]) {
@@ -138,9 +144,12 @@ export default function DomainsPage() {
 
     load()
       .then((domains) => {
-        if (domains.length > 0) runHealthCheck(domains.map((d) => d.id));
+        if (domains.length > 0) void runHealthCheck(domains.map((d) => d.id));
       })
-      .catch(console.error);
+      .catch((err) => {
+        setLoading(false);
+        setError(err instanceof Error ? err.message : "加载域名失败");
+      });
   }, []);
 
   function onTemplateChange(templateId: string) {
@@ -165,7 +174,7 @@ export default function DomainsPage() {
       if (row.setup) setLastSetup(row.setup);
       const warnText = row.warnings?.length ? ` ${row.warnings.join(" ")}` : "";
       setMessage(`已添加 ${row.hostname}${warnText}`.trim());
-      const domains = await load();
+      const domains = await load(true);
       if (domains.length > 0) await runHealthCheck([row.id]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "添加失败");
@@ -191,7 +200,7 @@ export default function DomainsPage() {
         body: JSON.stringify(payload),
       });
       setMessage(draft.templateKey !== row.templateKey ? "模板与链接已保存" : "已保存");
-      const domains = await load();
+      const domains = await load(true);
       await runHealthCheck([id]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "保存失败");
@@ -226,7 +235,7 @@ export default function DomainsPage() {
   async function toggleStatus(id: number, status: string) {
     setError("");
     await api(`/api/admin/domains/${id}`, { method: "PUT", body: JSON.stringify({ status }) });
-    await load();
+    await load(true);
   }
 
   async function deleteDomain(id: number, hostname: string) {
@@ -234,7 +243,7 @@ export default function DomainsPage() {
     setError("");
     await api(`/api/admin/domains/${id}`, { method: "DELETE" });
     setMessage(`已删除 ${hostname}`);
-    await load();
+    await load(true);
   }
 
   function setDraft(id: number, patch: Partial<DomainDraft>) {
@@ -424,7 +433,11 @@ export default function DomainsPage() {
             })}
           </tbody>
         </table>
-        {rows.length === 0 ? <p className="muted" style={{ marginTop: 12 }}>暂无域名，请在上方添加</p> : null}
+        {loading ? (
+          <p className="muted" style={{ marginTop: 12 }}>加载域名列表中…</p>
+        ) : rows.length === 0 ? (
+          <p className="muted" style={{ marginTop: 12 }}>暂无域名，请在上方添加</p>
+        ) : null}
       </div>
     </div>
   );
