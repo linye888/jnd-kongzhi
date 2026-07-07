@@ -1,6 +1,6 @@
 import { getLandingTemplate, isLandingTemplateId, listLandingTemplateOptions } from "@lp-admin/templates";
 import { eq } from "drizzle-orm";
-import { customers, landingPages, products } from "@lp-admin/db";
+import { customers, domains, landingPages, products } from "@lp-admin/db";
 import { getDb, nowIso } from "./utils";
 
 type Db = ReturnType<typeof getDb>;
@@ -88,6 +88,60 @@ export async function createLandingPageForDomain(
     })
     .returning();
   return row;
+}
+
+export async function cloneLandingPage(db: Db, landingPageId: number) {
+  const [existing] = await db.select().from(landingPages).where(eq(landingPages.id, landingPageId)).limit(1);
+  if (!existing) throw new Error("Landing page not found");
+  const ts = nowIso();
+  const { id: _id, ...data } = existing;
+  const [row] = await db.insert(landingPages).values({ ...data, createdAt: ts, updatedAt: ts }).returning();
+  return row;
+}
+
+/** 若多个域名共用同一落地页，为当前域名克隆一份独立副本，避免改链接时互相影响 */
+export async function ensureDedicatedLandingPage(db: Db, domainId: number): Promise<number> {
+  const [domain] = await db.select().from(domains).where(eq(domains.id, domainId)).limit(1);
+  if (!domain) throw new Error("Domain not found");
+
+  const sharing = await db
+    .select({ id: domains.id })
+    .from(domains)
+    .where(eq(domains.landingPageId, domain.landingPageId));
+
+  if (sharing.length <= 1) {
+    return domain.landingPageId;
+  }
+
+  const cloned = await cloneLandingPage(db, domain.landingPageId);
+  const ts = nowIso();
+  await db
+    .update(domains)
+    .set({ landingPageId: cloned.id, updatedAt: ts })
+    .where(eq(domains.id, domainId));
+
+  return cloned.id;
+}
+
+/** 一次性拆分所有共用落地页的域名（保留每组第一个域名仍指向原记录） */
+export async function splitAllSharedLandingPages(db: Db) {
+  const allDomains = await db.select({ id: domains.id, landingPageId: domains.landingPageId }).from(domains);
+  const byLandingPage = new Map<number, number[]>();
+  for (const row of allDomains) {
+    const list = byLandingPage.get(row.landingPageId) ?? [];
+    list.push(row.id);
+    byLandingPage.set(row.landingPageId, list);
+  }
+
+  let split = 0;
+  for (const domainIds of byLandingPage.values()) {
+    if (domainIds.length <= 1) continue;
+    for (let i = 1; i < domainIds.length; i++) {
+      await ensureDedicatedLandingPage(db, domainIds[i]);
+      split++;
+    }
+  }
+  return { split };
 }
 
 export async function updateLandingPageFields(
