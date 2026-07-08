@@ -53,6 +53,7 @@ pnpm db:seed:local
 本地测试域名（seed 后）：
 - `localhost` → 印度英语版
 - `demo-mx.local` → 墨西哥西语版
+- 后台可选 **哥伦比亚西语** 模板（`colombia-es`，$120.000 COP）
 
 ### 3. 启动管理后台
 
