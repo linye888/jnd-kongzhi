@@ -1,7 +1,7 @@
-import { DEFAULT_EN_LANDING, DEFAULT_MX_LANDING } from "./defaults.js";
+import { DEFAULT_CO_LANDING, DEFAULT_EN_LANDING, DEFAULT_MX_LANDING } from "./defaults.js";
 import type { LandingPageConfig } from "@lp-admin/shared";
 
-export type LandingTemplateId = "india-en" | "mexico-es";
+export type LandingTemplateId = "india-en" | "mexico-es" | "colombia-es";
 
 type LandingPreset = Omit<LandingPageConfig, "id" | "customerId" | "productId" | "createdAt" | "updatedAt">;
 
@@ -24,6 +24,12 @@ export const LANDING_TEMPLATES: LandingTemplateDefinition[] = [
     name: "Mini Short - 墨西哥西语",
     description: "西班牙语界面 · $688 MXN 奖励文案",
     preset: DEFAULT_MX_LANDING,
+  },
+  {
+    id: "colombia-es",
+    name: "Mini Short - 哥伦比亚西语",
+    description: "西班牙语界面 · $120.000 COP 奖励文案",
+    preset: DEFAULT_CO_LANDING,
   },
 ];
 
