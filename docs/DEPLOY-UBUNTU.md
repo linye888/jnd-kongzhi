@@ -68,7 +68,7 @@ cp apps/server/.env.example apps/server/.env
 ```bash
 # 构建管理后台（API 地址指向你的域名）
 cd apps/admin
-VITE_API_BASE=http://localhost:3000 VITE_BASE_PATH=/admin/ pnpm build
+VITE_API_BASE=http://localhost:3000 pnpm build:ubuntu
 
 # 将构建产物复制到 server 可读取的目录
 mkdir -p ../server/admin
@@ -136,7 +136,7 @@ sudo systemctl restart lp-admin
 cd /opt/lp-admin/src
 git pull
 sudo -u lpadmin pnpm install
-sudo -u lpadmin bash -c "cd apps/admin && VITE_API_BASE=https://yourdomain.com pnpm build"
+sudo -u lpadmin bash -c "cd apps/admin && VITE_API_BASE=https://yourdomain.com pnpm build:ubuntu"
 rsync -a apps/admin/dist/ /opt/lp-admin/admin/
 sudo -u lpadmin bash -c "cd apps/server && pnpm install"
 sudo systemctl restart lp-admin
