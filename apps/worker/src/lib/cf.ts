@@ -80,7 +80,132 @@ interface DnsRecordResult {
   message?: string;
 }
 
-/** 为平台子域创建橙云 A 记录，配合 Worker 路由使用（Workers Domains API 失败时的兜底） */
+/** 不应绑定 Worker 落地页的平台子域（admin 走 Pages，customers 为 SaaS CNAME 目标） */
+export const RESERVED_LANDING_SUBDOMAINS = new Set(["admin", "customers"]);
+
+export function isReservedPlatformHostname(hostname: string, platformZone: string): boolean {
+  const host = hostname.toLowerCase();
+  const zone = platformZone.toLowerCase();
+  if (host === zone || !host.endsWith(`.${zone}`)) return false;
+  const label = host.slice(0, -(zone.length + 1));
+  return !label.includes(".") && RESERVED_LANDING_SUBDOMAINS.has(label);
+}
+
+async function cfFetch(env: Env, url: string, init?: RequestInit) {
+  return fetch(url, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${env.CF_API_TOKEN}`,
+      "Content-Type": "application/json",
+      ...(init?.headers ?? {}),
+    },
+  });
+}
+
+/** 从 Worker 自定义域解绑（避免 admin 等被 Worker 接管） */
+export async function detachWorkerCustomDomain(env: Env, hostname: string): Promise<DnsRecordResult> {
+  if (!env.CF_ACCOUNT_ID || !env.CF_API_TOKEN) {
+    return { ok: false, message: "未配置 Cloudflare API 凭证" };
+  }
+
+  const listRes = await cfFetch(
+    env,
+    `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/workers/domains?hostname=${encodeURIComponent(hostname)}`,
+  );
+  const listPayload = (await listRes.json()) as {
+    success: boolean;
+    result?: Array<{ id: string; hostname: string }>;
+  };
+
+  if (!listPayload.success || !listPayload.result?.length) {
+    return { ok: true, message: "Worker 自定义域未绑定" };
+  }
+
+  for (const item of listPayload.result) {
+    if (item.hostname.toLowerCase() !== hostname.toLowerCase()) continue;
+    await cfFetch(
+      env,
+      `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/workers/domains/${item.id}`,
+      { method: "DELETE" },
+    );
+  }
+
+  return { ok: true, message: "已从 Worker 解绑" };
+}
+
+/** 恢复 admin 子域 CNAME 到 Cloudflare Pages */
+export async function restoreAdminPagesDns(env: Env, platformZone: string): Promise<DnsRecordResult> {
+  if (!env.CF_API_TOKEN || !env.CF_ZONE_ID) {
+    return { ok: false, message: "未配置 Cloudflare API 凭证" };
+  }
+
+  const adminFqdn = `admin.${platformZone}`;
+  const pagesTarget = env.ADMIN_PAGES_TARGET ?? "lp-admin-6rt.pages.dev";
+
+  await detachWorkerCustomDomain(env, adminFqdn);
+
+  const wildcardRes = await cfFetch(
+    env,
+    `https://api.cloudflare.com/client/v4/zones/${env.CF_ZONE_ID}/dns_records?type=A&name=${encodeURIComponent(`*.${platformZone}`)}`,
+  );
+  const wildcardPayload = (await wildcardRes.json()) as { success: boolean; result?: Array<{ id: string }> };
+  if (wildcardPayload.success && wildcardPayload.result?.length) {
+    for (const record of wildcardPayload.result) {
+      await cfFetch(
+        env,
+        `https://api.cloudflare.com/client/v4/zones/${env.CF_ZONE_ID}/dns_records/${record.id}`,
+        { method: "DELETE" },
+      );
+    }
+  }
+
+  const listRes = await cfFetch(
+    env,
+    `https://api.cloudflare.com/client/v4/zones/${env.CF_ZONE_ID}/dns_records?name=${encodeURIComponent(adminFqdn)}`,
+  );
+  const listPayload = (await listRes.json()) as {
+    success: boolean;
+    result?: Array<{ id: string; type: string; content: string }>;
+  };
+
+  if (listPayload.success && listPayload.result?.length) {
+    const hasCorrectCname = listPayload.result.some(
+      (record) => record.type === "CNAME" && record.content.replace(/\.$/, "") === pagesTarget,
+    );
+    if (hasCorrectCname) {
+      return { ok: true, message: "Admin Pages DNS 已正确" };
+    }
+
+    for (const record of listPayload.result) {
+      await cfFetch(
+        env,
+        `https://api.cloudflare.com/client/v4/zones/${env.CF_ZONE_ID}/dns_records/${record.id}`,
+        { method: "DELETE" },
+      );
+    }
+  }
+
+  const createRes = await cfFetch(env, `https://api.cloudflare.com/client/v4/zones/${env.CF_ZONE_ID}/dns_records`, {
+    method: "POST",
+    body: JSON.stringify({
+      type: "CNAME",
+      name: "admin",
+      content: pagesTarget,
+      proxied: true,
+      ttl: 1,
+      comment: "lp-admin Cloudflare Pages",
+    }),
+  });
+
+  const createPayload = (await createRes.json()) as { success: boolean; errors?: Array<{ message: string }> };
+  if (createPayload.success) {
+    return { ok: true, message: `已恢复 admin → ${pagesTarget}` };
+  }
+
+  return { ok: false, message: createPayload.errors?.[0]?.message ?? "Admin DNS 恢复失败" };
+}
+
+/** 为平台子域创建橙云 A 记录，配合 Worker 自定义域使用 */
 export async function createProxiedSubdomainRecord(env: Env, hostname: string, platformZone: string): Promise<DnsRecordResult> {
   if (!env.CF_API_TOKEN || !env.CF_ZONE_ID) {
     return { ok: false, message: "未配置 Cloudflare API 凭证" };
@@ -132,51 +257,4 @@ export async function createProxiedSubdomainRecord(env: Env, hostname: string, p
     return { ok: true, message: "DNS 记录已存在" };
   }
   return { ok: false, message: err?.message ?? "DNS 记录创建失败" };
-}
-
-/** 创建 *.platformZone 通配符橙云 A 记录，所有子域一次生效 */
-export async function ensureWildcardPlatformDns(env: Env, platformZone: string): Promise<DnsRecordResult> {
-  if (!env.CF_API_TOKEN || !env.CF_ZONE_ID) {
-    return { ok: false, message: "未配置 Cloudflare API 凭证" };
-  }
-
-  const wildcardFqdn = `*.${platformZone}`;
-  const listRes = await fetch(
-    `https://api.cloudflare.com/client/v4/zones/${env.CF_ZONE_ID}/dns_records?type=A&name=${encodeURIComponent(wildcardFqdn)}`,
-    { headers: { Authorization: `Bearer ${env.CF_API_TOKEN}` } },
-  );
-  const listPayload = (await listRes.json()) as { success: boolean; result?: Array<{ id: string }> };
-  if (listPayload.success && listPayload.result?.length) {
-    return { ok: true, message: "通配符 DNS 已存在" };
-  }
-
-  const createRes = await fetch(
-    `https://api.cloudflare.com/client/v4/zones/${env.CF_ZONE_ID}/dns_records`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${env.CF_API_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        type: "A",
-        name: "*",
-        content: "192.0.2.1",
-        proxied: true,
-        ttl: 1,
-        comment: "lp-admin wildcard platform subdomains",
-      }),
-    },
-  );
-
-  const createPayload = (await createRes.json()) as { success: boolean; errors?: Array<{ message: string; code: number }> };
-  if (createPayload.success) {
-    return { ok: true, message: "已创建通配符 DNS（*.platformZone）" };
-  }
-
-  const err = createPayload.errors?.[0];
-  if (err?.code === 81057) {
-    return { ok: true, message: "通配符 DNS 已存在" };
-  }
-  return { ok: false, message: err?.message ?? "通配符 DNS 创建失败" };
 }

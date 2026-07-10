@@ -1,5 +1,5 @@
 import type { Env } from "../env";
-import { createProxiedSubdomainRecord, ensureWildcardPlatformDns } from "./cf";
+import { createProxiedSubdomainRecord, isReservedPlatformHostname } from "./cf";
 import { getDeployTarget, getPlatformConfig, getServerIp, isIpAddress } from "./platform-config";
 
 export type DomainKind = "platform_subdomain" | "customer_owned";
@@ -137,6 +137,9 @@ export async function bindPlatformWorkerDomain(
 
   if (getDomainKind(hostname, env) !== "platform_subdomain") {
     return { ok: false, message: `仅支持 ${getPlatformZone(env)} 子域名自动绑定` };
+  }
+  if (isReservedPlatformHostname(hostname, getPlatformZone(env))) {
+    return { ok: false, message: `${hostname} 为系统保留子域，不能绑定落地页 Worker` };
   }
   if (!env.CF_ACCOUNT_ID || !env.CF_API_TOKEN || !env.CF_ZONE_ID) {
     return { ok: false, message: "未配置 Cloudflare API 凭证" };

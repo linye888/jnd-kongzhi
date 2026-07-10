@@ -11,6 +11,7 @@ ADMIN_DEFAULT_PASSWORD = "admin123456"
 CF_ACCOUNT_ID = "6264257c07a1f8fcd60375f5d5434fc1"
 CF_ZONE_ID = "be18f06f76ed1fd17bccf2cb877fdcf6"
 FALLBACK_ORIGIN = "origin.minishort.sbs"
+ADMIN_PAGES_TARGET = "lp-admin-6rt.pages.dev"
 
 [triggers]
 crons = ["0 * * * *"]
@@ -25,10 +26,6 @@ zone_name = "minishort.sbs"
 
 [[routes]]
 pattern = "origin.minishort.sbs/*"
-zone_name = "minishort.sbs"
-
-[[routes]]
-pattern = "*.minishort.sbs/*"
 zone_name = "minishort.sbs"
 
 [[d1_databases]]

@@ -19,6 +19,7 @@ export interface Env {
   CF_ACCOUNT_ID?: string;
   CF_API_TOKEN?: string;
   CF_ZONE_ID?: string;
+  ADMIN_PAGES_TARGET?: string;
   ADMIN_DEFAULT_EMAIL?: string;
   ADMIN_DEFAULT_PASSWORD?: string;
   /** Node.js 自托管运行时注入的 Drizzle 实例 */
