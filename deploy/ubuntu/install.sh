@@ -97,9 +97,9 @@ cat > "$APP_DIR/src/apps/server/.env" <<EOF
 JWT_SECRET=${JWT_SECRET}
 HOST=127.0.0.1
 PORT=3000
+DEPLOY_TARGET=self-hosted
+SERVER_IP=${DOMAIN}
 PLATFORM_ZONE=${DOMAIN}
-CNAME_TARGET=customers.${DOMAIN}
-FALLBACK_ORIGIN=origin.${DOMAIN}
 DB_PATH=${APP_DIR}/data/lp-admin.db
 ASSETS_DIR=${APP_DIR}/legacy/assets
 ADMIN_DIR=${APP_DIR}/admin
@@ -113,7 +113,7 @@ if [[ "$SKIP_BUILD" -eq 0 ]]; then
   echo "==> 安装依赖并构建"
   cd "$APP_DIR/src"
   sudo -u "$APP_USER" pnpm install --frozen-lockfile 2>/dev/null || sudo -u "$APP_USER" pnpm install
-  sudo -u "$APP_USER" bash -c "cd apps/admin && VITE_BASE_PATH=/admin/ VITE_API_BASE=https://${DOMAIN} pnpm build"
+  sudo -u "$APP_USER" bash -c "cd apps/admin && VITE_API_BASE=http://${DOMAIN} pnpm build:ubuntu"
   rsync -a "$APP_DIR/src/apps/admin/dist/" "$APP_DIR/admin/"
 fi
 
@@ -135,7 +135,7 @@ systemctl reload nginx
 
 if [[ -n "$ADMIN_EMAIL" ]]; then
   echo "==> 申请 SSL 证书"
-  certbot --nginx -d "$DOMAIN" -d "www.${DOMAIN}" -d "$ADMIN_DOMAIN" -d "customers.${DOMAIN}" -d "origin.${DOMAIN}" \
+  certbot --nginx -d "$DOMAIN" -d "www.${DOMAIN}" -d "$ADMIN_DOMAIN" \
     --non-interactive --agree-tos -m "$ADMIN_EMAIL" --redirect || true
 fi
 

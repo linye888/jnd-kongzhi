@@ -1,13 +1,19 @@
-const FALLBACK_API_BASE = "https://minishort.sbs";
 const CONFIGURED_API_BASE = import.meta.env.VITE_API_BASE ?? "";
+const IS_SELF_HOSTED = import.meta.env.VITE_DEPLOY_TARGET === "self-hosted";
+/** 仅 Cloudflare 版构建使用；Ubuntu 独立版不连接 CF 站 */
+const CF_FALLBACK_API_BASE = "https://minishort.sbs";
 
 function apiBaseCandidates(): string[] {
-  const bases = [CONFIGURED_API_BASE, FALLBACK_API_BASE].filter(Boolean);
+  if (IS_SELF_HOSTED) {
+    return CONFIGURED_API_BASE ? [CONFIGURED_API_BASE] : [window.location.origin];
+  }
+  const bases = [CONFIGURED_API_BASE, CF_FALLBACK_API_BASE].filter(Boolean);
   return [...new Set(bases)];
 }
 
 export function getApiBase() {
-  return CONFIGURED_API_BASE || FALLBACK_API_BASE;
+  if (IS_SELF_HOSTED) return CONFIGURED_API_BASE || window.location.origin;
+  return CONFIGURED_API_BASE || CF_FALLBACK_API_BASE;
 }
 
 export function getToken(): string | null {
@@ -26,13 +32,14 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   if (token) headers.set("Authorization", `Bearer ${token}`);
 
   let lastError: Error | null = null;
-  for (const base of apiBaseCandidates()) {
+  const bases = apiBaseCandidates();
+  for (const base of bases) {
     try {
       const data = await requestOnce<T>(base, path, { ...init, headers });
       return data;
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
-      if (apiBaseCandidates().length === 1) break;
+      if (bases.length === 1) break;
     }
   }
   throw lastError ?? new Error("无法连接 API");

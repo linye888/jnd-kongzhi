@@ -16,13 +16,9 @@ legacy/        → 原始静态落地页参考 (jnd-kongzhi)
 
 ## Ubuntu 自托管部署
 
-若需在自有 Ubuntu 服务器部署（不依赖 Cloudflare Workers），请参阅 **[docs/DEPLOY-UBUNTU.md](docs/DEPLOY-UBUNTU.md)**。
+若需在自有 Ubuntu 服务器部署**独立系统**（与 Cloudflare 站数据隔离），请参阅 **[docs/DEPLOY-UBUNTU.md](docs/DEPLOY-UBUNTU.md)**。
 
-快速开始：
-
-```bash
-sudo bash deploy/ubuntu/install.sh --domain yourdomain.com --email you@example.com
-```
+> Ubuntu 版与 CF 版共用代码仓库，但数据库、域名配置、运行环境**完全独立**，互不影响。
 
 ## 功能
 

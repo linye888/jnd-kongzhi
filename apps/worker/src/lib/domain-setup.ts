@@ -13,7 +13,7 @@ export interface DomainSetupGuide {
   deployTarget?: "cloudflare" | "self-hosted";
 }
 
-const DEFAULT_PLATFORM_ZONE = "minishort.sbs";
+const DEFAULT_PLATFORM_ZONE = "example.com";
 
 export function getPlatformZone(env?: Env): string {
   return env?.PLATFORM_ZONE ?? DEFAULT_PLATFORM_ZONE;

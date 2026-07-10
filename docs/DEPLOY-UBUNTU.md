@@ -1,6 +1,13 @@
 # Ubuntu 自托管部署指南
 
-本文档介绍如何在 **Ubuntu 22.04/24.04** 服务器上部署 LP Admin，无需 Cloudflare Workers。
+> **与 Cloudflare 站完全独立**
+>
+> - Ubuntu 版使用**本机 SQLite 数据库**（`/opt/lp-admin/data/`），与 CF 的 D1 **不是同一个库**
+> - **不会**连接你的 Cloudflare API，**不会**同步 CF 站上的域名、客户、统计数据
+> - 需在 Ubuntu 后台**重新添加**域名和客户，相当于一套全新系统
+> - 代码仓库相同，但运行环境和数据完全隔离
+
+本文档介绍如何在 **Ubuntu 22.04/24.04** 服务器上部署 LP Admin 独立版。
 
 ## 架构对比
 
