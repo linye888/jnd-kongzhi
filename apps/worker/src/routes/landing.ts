@@ -1,5 +1,7 @@
 import { renderLandingPage } from "@lp-admin/templates";
 import type { Env } from "../env";
+import { isReservedPlatformHostname } from "../lib/cf";
+import { getPlatformZone } from "../lib/domain-setup";
 import { resolveDomain } from "../lib/domains";
 import { aggregateDomainDay } from "../lib/stats";
 import { events } from "@lp-admin/db";
@@ -16,6 +18,10 @@ export async function handleLandingRequest(request: Request, env: Env, ctx: Exec
   }
 
   const hostname = url.hostname;
+  if (isReservedPlatformHostname(hostname, getPlatformZone(env))) {
+    return null;
+  }
+
   const resolved = await resolveDomain(env, hostname);
   if (!resolved) {
     return new Response("Domain not configured", { status: 404 });
