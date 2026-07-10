@@ -160,14 +160,21 @@ export async function bindPlatformWorkerDomain(
   );
 
   const payload = (await response.json()) as { success: boolean; errors?: Array<{ message: string; code: number }> };
-  if (payload.success) return { ok: true };
+  const platformZone = getPlatformZone(env);
+  const ensureDns = () => createProxiedSubdomainRecord(env, hostname, platformZone);
+
+  if (payload.success) {
+    const dns = await ensureDns();
+    return { ok: true, message: dns.message ?? "Worker 与 DNS 已配置" };
+  }
 
   const err = payload.errors?.[0];
   if (err?.code === 100117) {
-    return { ok: true, message: "Worker 域名可能已绑定" };
+    const dns = await ensureDns();
+    return { ok: dns.ok, message: dns.message ?? "Worker 域名可能已绑定" };
   }
 
-  const dnsFallback = await createProxiedSubdomainRecord(env, hostname, getPlatformZone(env));
+  const dnsFallback = await ensureDns();
   if (dnsFallback.ok) {
     return { ok: true, message: dnsFallback.message ?? "Worker 路由 + DNS 已配置" };
   }
