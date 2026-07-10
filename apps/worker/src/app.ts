@@ -11,10 +11,7 @@ import statsRoutes from "./routes/admin/stats";
 import userRoutes from "./routes/admin/users";
 import eventRoutes from "./routes/events";
 import { handleLandingRequest } from "./routes/landing";
-
-function noopWaitUntil(promise: Promise<unknown>) {
-  void promise.catch((err) => console.error("[waitUntil]", err));
-}
+import { getExecutionContext } from "./lib/runtime-context";
 
 export function createApp(beforeLanding?: (app: Hono<{ Bindings: Env }>) => void) {
   const app = new Hono<{ Bindings: Env }>();
@@ -43,7 +40,7 @@ export function createApp(beforeLanding?: (app: Hono<{ Bindings: Env }>) => void
   beforeLanding?.(app);
 
   app.all("*", async (c) => {
-    const ctx = c.executionCtx ?? { waitUntil: noopWaitUntil };
+    const ctx = getExecutionContext(c);
     const landing = await handleLandingRequest(c.req.raw, c.env, ctx);
     if (landing) return landing;
     return c.notFound();

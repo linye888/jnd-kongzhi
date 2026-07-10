@@ -4,6 +4,7 @@ import type { Env } from "../env";
 import { resolveDomain } from "../lib/domains";
 import { aggregateDomainDay } from "../lib/stats";
 import { getDb, classifyTraffic, nowIso, normalizeHostname } from "../lib/utils";
+import { getExecutionContext } from "../lib/runtime-context";
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -32,7 +33,7 @@ app.post("/", async (c) => {
   const ts = nowIso();
   const db = getDb(c.env);
 
-  c.executionCtx.waitUntil(
+  getExecutionContext(c).waitUntil(
     (async () => {
       await db.insert(events).values({
         domainId: resolved.domainId,
