@@ -1,30 +1,7 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-
-const ORIGIN_TARGET = "origin.minishort.sbs";
-
-const platformSteps = [
-  "打开「域名管理」，在上方表单选择落地页模板",
-  "域名填写子域名，例如 india.minishort.sbs 或 brazil.minishort.sbs",
-  "填写该域名专用的下载链接和 Facebook Pixel ID",
-  "点击「添加」，等待 1～5 分钟（平台自动绑定 Worker）",
-  "在列表中点击「重新检测」，确认显示绿色「正常」",
-  "Facebook 广告落地页填：https://你的子域名.minishort.sbs",
-];
-
-const customSteps = [
-  "将域名（如 minishort.top）接入 Cloudflare，等待 NS 生效",
-  `在 DNS 添加 CNAME：@ 或 www → ${ORIGIN_TARGET}，开启橙云 ☁️`,
-  "SSL/TLS 模式选「灵活」或「完全」，等待证书生效（约 5～15 分钟）",
-  "回到本后台「域名管理」，添加相同 hostname + 模板 + 下载链接 + Pixel",
-  "点击「重新检测」并访问 https://你的域名 确认落地页正常",
-  "Facebook 广告落地页填：https://你的域名",
-];
-
-const dnsRows = [
-  { name: "@", target: ORIGIN_TARGET, note: "根域名 minishort.top" },
-  { name: "www", target: ORIGIN_TARGET, note: "www.minishort.top" },
-  { name: "ad", target: ORIGIN_TARGET, note: "子域名 ad.minishort.top（可选）" },
-];
+import type { PlatformConfig } from "@lp-admin/shared";
+import { getPlatformConfig, isSelfHosted } from "../lib/platform-config";
 
 const checklist = [
   "健康检测显示「正常」",
@@ -35,13 +12,77 @@ const checklist = [
 ];
 
 export default function DomainGuidePage() {
+  const [config, setConfig] = useState<PlatformConfig | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    getPlatformConfig().then(setConfig).catch((e) => setError(String(e)));
+  }, []);
+
+  if (error) return <div className="error">{error}</div>;
+  if (!config) return <p className="muted">加载配置中…</p>;
+
+  const selfHosted = isSelfHosted(config);
+  const serverTarget = config.serverIp ?? config.platformZone;
+  const zone = config.platformZone;
+
+  const platformSteps = selfHosted
+    ? [
+        "打开「域名管理」，选择落地页模板",
+        `域名填写子域名，例如 india.${isIp(zone) ? "yourdomain.com" : zone}`,
+        `在 DNS 添加 A 记录指向服务器 IP：${serverTarget}`,
+        "填写下载链接和 Facebook Pixel ID，点击「添加」",
+        "等待 DNS 生效后点击「重新检测」，确认显示绿色「正常」",
+        isIp(zone) ? `广告落地页可用 http://你的域名` : `广告落地页填：https://你的子域名`,
+      ]
+    : [
+        "打开「域名管理」，在上方表单选择落地页模板",
+        `域名填写子域名，例如 india.${zone} 或 brazil.${zone}`,
+        "填写该域名专用的下载链接和 Facebook Pixel ID",
+        "点击「添加」，等待 1～5 分钟（平台自动绑定 Worker）",
+        "在列表中点击「重新检测」，确认显示绿色「正常」",
+        `Facebook 广告落地页填：https://你的子域名.${zone}`,
+      ];
+
+  const customSteps = selfHosted
+    ? [
+        `在域名服务商（阿里云/腾讯云/Cloudflare 等）管理 DNS`,
+        `添加 A 记录：@ → ${serverTarget}（根域名）`,
+        `如有 www，添加 A 记录：www → ${serverTarget}`,
+        "回到本后台「域名管理」，添加相同 hostname + 模板 + 下载链接 + Pixel",
+        "DNS 生效后执行：sudo certbot --nginx -d 你的域名（开启 HTTPS）",
+        "点击「重新检测」并访问落地页确认正常",
+      ]
+    : [
+        "将域名（如 minishort.top）接入 Cloudflare，等待 NS 生效",
+        `在 DNS 添加 CNAME：@ 或 www → ${config.fallbackOrigin}，开启橙云 ☁️`,
+        "SSL/TLS 模式选「灵活」或「完全」，等待证书生效（约 5～15 分钟）",
+        "回到本后台「域名管理」，添加相同 hostname + 模板 + 下载链接 + Pixel",
+        "点击「重新检测」并访问 https://你的域名 确认落地页正常",
+        "Facebook 广告落地页填：https://你的域名",
+      ];
+
+  const dnsRows = selfHosted
+    ? [
+        { type: "A", name: "@", target: serverTarget, proxy: "—", note: "根域名" },
+        { type: "A", name: "www", target: serverTarget, proxy: "—", note: "www 子域（可选）" },
+        { type: "A", name: "promo", target: serverTarget, proxy: "—", note: "投放子域（可选）" },
+      ]
+    : [
+        { type: "CNAME", name: "@", target: config.fallbackOrigin, proxy: "已代理 ☁️", note: "根域名" },
+        { type: "CNAME", name: "www", target: config.fallbackOrigin, proxy: "已代理 ☁️", note: "www 子域" },
+        { type: "CNAME", name: "ad", target: config.fallbackOrigin, proxy: "已代理 ☁️", note: "投放子域（可选）" },
+      ];
+
   return (
     <div>
       <div className="topbar" style={{ marginBottom: 16 }}>
         <div>
           <h1 style={{ margin: 0 }}>添加域名引导</h1>
           <p className="muted" style={{ margin: "8px 0 0" }}>
-            选择适合你的方式，按步骤完成 DNS（如有）和后台配置
+            {selfHosted
+              ? `当前为 Ubuntu 自托管模式，域名需 A 记录解析到 ${serverTarget}`
+              : "当前为 Cloudflare 模式，按步骤完成 DNS（如有）和后台配置"}
           </p>
         </div>
         <Link className="btn btn-primary" to="/domains">
@@ -50,12 +91,11 @@ export default function DomainGuidePage() {
       </div>
 
       <div className="guide-grid">
-        <div className="panel guide-card guide-card-recommended">
-          <div className="guide-badge">推荐</div>
-          <h2>方式 A：平台子域名</h2>
-          <p className="muted">零 DNS 配置，适合快速测试和投放</p>
-          <p>
-            示例：<code>india.minishort.sbs</code> · <code>brazil.minishort.sbs</code>
+        <div className={`panel guide-card ${selfHosted ? "" : "guide-card-recommended"}`}>
+          {!selfHosted ? <div className="guide-badge">推荐</div> : null}
+          <h2>方式 A：{selfHosted ? "平台子域名" : "平台子域名"}</h2>
+          <p className="muted">
+            {selfHosted ? "需添加 A 记录到服务器 IP" : "零 DNS 配置，适合快速测试和投放"}
           </p>
           <ol className="guide-steps">
             {platformSteps.map((step) => (
@@ -64,11 +104,11 @@ export default function DomainGuidePage() {
           </ol>
         </div>
 
-        <div className="panel guide-card">
+        <div className={`panel guide-card ${selfHosted ? "guide-card-recommended" : ""}`}>
+          {selfHosted ? <div className="guide-badge">推荐</div> : null}
           <h2>方式 B：自有域名</h2>
-          <p className="muted">适合品牌独立域名，需先在 Cloudflare 配 DNS</p>
-          <p>
-            示例：<code>minishort.top</code> · <code>www.minishort.top</code> · <code>ad.minishort.top</code>
+          <p className="muted">
+            {selfHosted ? "品牌独立域名，A 记录指向本服务器" : "适合品牌独立域名，需先在 Cloudflare 配 DNS"}
           </p>
           <ol className="guide-steps">
             {customSteps.map((step) => (
@@ -79,9 +119,13 @@ export default function DomainGuidePage() {
       </div>
 
       <div className="panel" style={{ marginTop: 16 }}>
-        <h2 style={{ marginTop: 0 }}>自有域名 DNS 配置（Cloudflare）</h2>
+        <h2 style={{ marginTop: 0 }}>
+          {selfHosted ? "DNS 配置（A 记录）" : "自有域名 DNS 配置（Cloudflare）"}
+        </h2>
         <p className="muted" style={{ marginTop: 0 }}>
-          CNAME 目标必须为 <code>{ORIGIN_TARGET}</code>，且必须开启代理（橙云 ☁️）。不要用 *.workers.dev，否则会 522。
+          {selfHosted
+            ? `所有域名/子域名均需 A 记录指向服务器 IP：${serverTarget}`
+            : `CNAME 目标必须为 ${config.fallbackOrigin}，且必须开启代理（橙云 ☁️）`}
         </p>
         <table className="table">
           <thead>
@@ -96,10 +140,10 @@ export default function DomainGuidePage() {
           <tbody>
             {dnsRows.map((row) => (
               <tr key={row.name}>
-                <td>CNAME</td>
+                <td>{row.type}</td>
                 <td><code>{row.name}</code></td>
                 <td><code>{row.target}</code></td>
-                <td>已代理 ☁️</td>
+                <td>{row.proxy}</td>
                 <td className="muted">{row.note}</td>
               </tr>
             ))}
@@ -126,16 +170,16 @@ export default function DomainGuidePage() {
             <tr>
               <td>域名</td>
               <td>与 DNS / 广告链接完全一致</td>
-              <td><code>minishort.top</code></td>
+              <td><code>promo.example.com</code></td>
             </tr>
             <tr>
               <td>下载链接</td>
-              <td>该域名专属 APK 地址，每个域名可不同</td>
+              <td>该域名专属 APK 地址</td>
               <td><code>https://...</code></td>
             </tr>
             <tr>
               <td>Pixel ID</td>
-              <td>Facebook Pixel，用于广告转化追踪</td>
+              <td>Facebook Pixel</td>
               <td><code>4377607675843081</code></td>
             </tr>
           </tbody>
@@ -151,23 +195,6 @@ export default function DomainGuidePage() {
         </ul>
       </div>
 
-      <div className="panel" style={{ marginTop: 16 }}>
-        <h2 style={{ marginTop: 0 }}>常见问题</h2>
-        <dl className="guide-faq">
-          <dt>minishort.top 和 minishort.sbs 有什么区别？</dt>
-          <dd>
-            <code>*.minishort.sbs</code> 是平台子域，后台添加后自动绑定；<code>minishort.top</code> 等自有域名需先 CNAME 到{" "}
-            <code>{ORIGIN_TARGET}</code>，再在后台添加。
-          </dd>
-          <dt>修改一个域名的下载链接会影响其他域名吗？</dt>
-          <dd>不会。每个域名有独立落地页配置，保存时只影响当前域名。</dd>
-          <dt>和 Facebook「潜在客户」数字对不上？</dt>
-          <dd>
-            请看 Dashboard 表格里的「独立下载用户」，不要和「下载次数」对比。Facebook 只统计广告归因的 Lead，后台统计所有访问来源。
-          </dd>
-        </dl>
-      </div>
-
       <div className="actions" style={{ marginTop: 20 }}>
         <Link className="btn btn-primary" to="/domains">
           前往域名管理
@@ -178,4 +205,8 @@ export default function DomainGuidePage() {
       </div>
     </div>
   );
+}
+
+function isIp(value: string) {
+  return /^\d{1,3}(\.\d{1,3}){3}$/.test(value);
 }

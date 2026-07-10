@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import type { DomainSetupGuide, LandingTemplateOption } from "@lp-admin/shared";
 import DomainSetupGuidePanel from "../components/DomainSetupGuide";
 import { api, formatRate } from "../lib/api";
+import { domainPlaceholder, getPlatformConfig } from "../lib/platform-config";
 
 interface DomainRow {
   id: number;
@@ -86,6 +87,7 @@ export default function DomainsPage() {
   const [lastSetup, setLastSetup] = useState<DomainSetupGuide | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hostnamePlaceholder, setHostnamePlaceholder] = useState("your-domain.com");
 
   async function load(silent = false) {
     if (!silent) setLoading(true);
@@ -133,6 +135,10 @@ export default function DomainsPage() {
   }
 
   useEffect(() => {
+    getPlatformConfig()
+      .then((platform) => setHostnamePlaceholder(domainPlaceholder(platform)))
+      .catch(console.error);
+
     api<LandingTemplateOption[]>("/api/admin/templates")
       .then((items) => {
         setTemplates(items);
@@ -295,7 +301,7 @@ export default function DomainsPage() {
             <input
               value={form.hostname}
               onChange={(e) => setForm({ ...form, hostname: e.target.value })}
-              placeholder="india.minishort.sbs"
+              placeholder={hostnamePlaceholder}
               required
             />
           </label>

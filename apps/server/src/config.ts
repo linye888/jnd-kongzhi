@@ -1,6 +1,10 @@
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 
+function isIp(value: string): boolean {
+  return /^\d{1,3}(\.\d{1,3}){3}$/.test(value);
+}
+
 export interface ServerConfig {
   port: number;
   host: string;
@@ -11,6 +15,8 @@ export interface ServerConfig {
   cnameTarget: string;
   fallbackOrigin: string;
   platformZone: string;
+  deployTarget: "cloudflare" | "self-hosted";
+  serverIp?: string;
   adminDefaultEmail: string;
   adminDefaultPassword: string;
   cfAccountId?: string;
@@ -25,6 +31,12 @@ function required(name: string, value: string | undefined): string {
 
 export function loadConfig(): ServerConfig {
   const platformZone = process.env.PLATFORM_ZONE ?? "example.com";
+  const serverIp = process.env.SERVER_IP ?? (isIp(platformZone) ? platformZone : undefined);
+  const deployTarget =
+    process.env.DEPLOY_TARGET === "cloudflare" || process.env.DEPLOY_TARGET === "self-hosted"
+      ? process.env.DEPLOY_TARGET
+      : "self-hosted";
+
   return {
     port: Number(process.env.PORT ?? "3000"),
     host: process.env.HOST ?? "127.0.0.1",
@@ -32,9 +44,11 @@ export function loadConfig(): ServerConfig {
     dbPath: process.env.DB_PATH ?? resolve(process.cwd(), "data", "lp-admin.db"),
     assetsDir: process.env.ASSETS_DIR ?? resolve(process.cwd(), "legacy", "assets"),
     adminDir: process.env.ADMIN_DIR ?? resolve(process.cwd(), "admin"),
-    cnameTarget: process.env.CNAME_TARGET ?? `customers.${platformZone}`,
-    fallbackOrigin: process.env.FALLBACK_ORIGIN ?? `origin.${platformZone}`,
+    cnameTarget: process.env.CNAME_TARGET ?? (serverIp ?? `customers.${platformZone}`),
+    fallbackOrigin: process.env.FALLBACK_ORIGIN ?? (serverIp ?? `origin.${platformZone}`),
     platformZone,
+    deployTarget,
+    serverIp,
     adminDefaultEmail: process.env.ADMIN_DEFAULT_EMAIL ?? "admin@example.com",
     adminDefaultPassword: process.env.ADMIN_DEFAULT_PASSWORD ?? "admin123456",
     cfAccountId: process.env.CF_ACCOUNT_ID,

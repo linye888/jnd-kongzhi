@@ -177,6 +177,16 @@ export interface DomainImportResult {
 
 export type DomainKind = "platform_subdomain" | "customer_owned";
 
+export type DeployTarget = "cloudflare" | "self-hosted";
+
+export interface PlatformConfig {
+  deployTarget: DeployTarget;
+  platformZone: string;
+  serverIp?: string;
+  fallbackOrigin: string;
+  cnameTarget: string;
+}
+
 export interface DomainSetupGuide {
   kind: DomainKind;
   hostname: string;
@@ -184,6 +194,7 @@ export interface DomainSetupGuide {
   originTarget: string;
   steps: string[];
   note?: string;
+  deployTarget?: DeployTarget;
 }
 
 export interface LandingTemplateOption {

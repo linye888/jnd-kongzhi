@@ -1,4 +1,5 @@
 import type { Env } from "../env";
+import { getDeployTarget, getPlatformConfig, getServerIp, isIpAddress } from "./platform-config";
 
 export type DomainKind = "platform_subdomain" | "customer_owned";
 
@@ -9,6 +10,7 @@ export interface DomainSetupGuide {
   originTarget: string;
   steps: string[];
   note?: string;
+  deployTarget?: "cloudflare" | "self-hosted";
 }
 
 const DEFAULT_PLATFORM_ZONE = "minishort.sbs";
@@ -19,15 +21,15 @@ export function getPlatformZone(env?: Env): string {
 
 export function getDomainKind(hostname: string, env?: Env): DomainKind {
   const platformZone = getPlatformZone(env);
+  if (isIpAddress(platformZone)) return "customer_owned";
   const host = hostname.toLowerCase();
   if (host === platformZone || host.endsWith(`.${platformZone}`)) return "platform_subdomain";
   return "customer_owned";
 }
 
-export function buildDomainSetupGuide(env: Env, hostname: string): DomainSetupGuide {
+function buildCloudflareGuide(env: Env, hostname: string, kind: DomainKind): DomainSetupGuide {
   const originTarget = env.FALLBACK_ORIGIN ?? `origin.${getPlatformZone(env)}`;
   const cnameTarget = env.CNAME_TARGET ?? `customers.${getPlatformZone(env)}`;
-  const kind = getDomainKind(hostname, env);
 
   if (kind === "platform_subdomain") {
     return {
@@ -35,6 +37,7 @@ export function buildDomainSetupGuide(env: Env, hostname: string): DomainSetupGu
       hostname,
       cnameTarget,
       originTarget,
+      deployTarget: "cloudflare",
       steps: [
         "在 LP Admin 添加该域名并绑定落地页（已完成或待完成）",
         "平台会自动将子域名绑定到 Worker（无需手动 DNS）",
@@ -50,6 +53,7 @@ export function buildDomainSetupGuide(env: Env, hostname: string): DomainSetupGu
     hostname,
     cnameTarget,
     originTarget,
+    deployTarget: "cloudflare",
     steps: [
       "客户将域名接入自己的 Cloudflare 账号（Free 套餐即可）",
       `添加 DNS：CNAME @ 或 www → ${originTarget}，开启代理（橙云 ☁️）`,
@@ -62,10 +66,74 @@ export function buildDomainSetupGuide(env: Env, hostname: string): DomainSetupGu
   };
 }
 
+function buildSelfHostedGuide(env: Env, hostname: string, kind: DomainKind): DomainSetupGuide {
+  const serverIp = getServerIp(env) ?? "你的服务器 IP";
+  const platformZone = getPlatformZone(env);
+  const useHttpOnly = isIpAddress(platformZone) || isIpAddress(hostname);
+  const accessUrl = useHttpOnly ? `http://${hostname}` : `https://${hostname}`;
+  const sslStep = useHttpOnly
+    ? `当前为 IP/HTTP 模式，可直接访问 ${accessUrl} 测试；绑定域名后执行 certbot 开启 HTTPS`
+    : `配置 HTTPS：sudo certbot --nginx -d ${hostname}`;
+
+  if (kind === "platform_subdomain") {
+    return {
+      kind,
+      hostname,
+      cnameTarget: serverIp,
+      originTarget: serverIp,
+      deployTarget: "self-hosted",
+      steps: [
+        "在 LP Admin 添加该域名并绑定落地页",
+        `在 DNS 添加 A 记录：${hostname} → ${serverIp}`,
+        "等待 DNS 生效（通常 5～30 分钟，可用 ping / nslookup 检查）",
+        sslStep,
+        `访问 ${accessUrl} 测试落地页、下载按钮与 Pixel`,
+        `Facebook 广告落地页填：${accessUrl}`,
+      ],
+      note: "Ubuntu 自托管：子域名需 A 记录解析到本服务器，Nginx 按 Host 自动路由。",
+    };
+  }
+
+  return {
+    kind,
+    hostname,
+    cnameTarget: serverIp,
+    originTarget: serverIp,
+    deployTarget: "self-hosted",
+    steps: [
+      "在 LP Admin 添加该域名并绑定落地页",
+      `在域名 DNS 添加 A 记录：@ → ${serverIp}（根域名访问）`,
+      `如有 www，添加 A 记录：www → ${serverIp}`,
+      "等待 DNS 生效后访问落地页测试",
+      sslStep,
+      `Facebook 广告落地页填：${accessUrl}`,
+    ],
+    note: "Ubuntu 自托管：域名 A 记录指向服务器 IP 即可，无需 Cloudflare。",
+  };
+}
+
+export function buildDomainSetupGuide(env: Env, hostname: string): DomainSetupGuide {
+  const kind = getDomainKind(hostname, env);
+  if (getDeployTarget(env) === "self-hosted") {
+    return buildSelfHostedGuide(env, hostname, kind);
+  }
+  return buildCloudflareGuide(env, hostname, kind);
+}
+
+export { getPlatformConfig };
+
 export async function bindPlatformWorkerDomain(
   env: Env,
   hostname: string,
 ): Promise<{ ok: boolean; message?: string }> {
+  if (getDeployTarget(env) === "self-hosted") {
+    const ip = getServerIp(env) ?? "服务器 IP";
+    return {
+      ok: true,
+      message: `Ubuntu 自托管：请在 DNS 将 ${hostname} 的 A 记录指向 ${ip}`,
+    };
+  }
+
   if (getDomainKind(hostname, env) !== "platform_subdomain") {
     return { ok: false, message: `仅支持 ${getPlatformZone(env)} 子域名自动绑定` };
   }
@@ -95,7 +163,6 @@ export async function bindPlatformWorkerDomain(
 
   const err = payload.errors?.[0];
   if (err?.code === 100117) {
-    // already has DNS — try assuming already bound
     return { ok: true, message: "Worker 域名可能已绑定" };
   }
   return { ok: false, message: err?.message ?? "Worker 域名绑定失败" };

@@ -14,6 +14,8 @@ export interface Env {
   CNAME_TARGET: string;
   FALLBACK_ORIGIN?: string;
   PLATFORM_ZONE?: string;
+  DEPLOY_TARGET?: "cloudflare" | "self-hosted";
+  SERVER_IP?: string;
   CF_ACCOUNT_ID?: string;
   CF_API_TOKEN?: string;
   CF_ZONE_ID?: string;

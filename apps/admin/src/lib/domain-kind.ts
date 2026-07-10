@@ -1,13 +1,14 @@
-import type { DomainKind } from "@lp-admin/shared";
+import type { DomainKind, PlatformConfig } from "@lp-admin/shared";
 
-const PLATFORM_ZONE = "minishort.sbs";
-
-export function getDomainKind(hostname: string): DomainKind {
+export function getDomainKind(hostname: string, config: PlatformConfig): DomainKind {
+  const platformZone = config.platformZone.toLowerCase();
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(platformZone)) return "customer_owned";
   const host = hostname.toLowerCase();
-  if (host === PLATFORM_ZONE || host.endsWith(`.${PLATFORM_ZONE}`)) return "platform_subdomain";
+  if (host === platformZone || host.endsWith(`.${platformZone}`)) return "platform_subdomain";
   return "customer_owned";
 }
 
-export function dnsTargetLabel(hostname: string, originTarget = "origin.minishort.sbs"): string {
-  return getDomainKind(hostname) === "platform_subdomain" ? "平台自动" : originTarget;
+export function dnsTargetLabel(hostname: string, config: PlatformConfig): string {
+  if (config.deployTarget === "self-hosted") return config.serverIp ?? config.platformZone;
+  return getDomainKind(hostname, config) === "platform_subdomain" ? "平台自动" : config.fallbackOrigin;
 }

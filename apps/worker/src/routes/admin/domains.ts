@@ -4,6 +4,7 @@ import { domains, domainStatsDaily, events, landingPages } from "@lp-admin/db";
 import type { Env } from "../../env";
 import { authMiddleware } from "../../middleware/auth";
 import { buildDomainSetupGuide, bindPlatformWorkerDomain } from "../../lib/domain-setup";
+import { getPlatformConfig } from "../../lib/platform-config";
 import { getCustomHostnameStatus, mapSslStatus } from "../../lib/cf";
 import {
   applyLandingTemplate,
@@ -20,6 +21,8 @@ import { getDb, jsonResponse, errorResponse, nowIso, normalizeHostname } from ".
 
 const app = new Hono<{ Bindings: Env }>();
 app.use("*", authMiddleware);
+
+app.get("/platform-config", (c) => jsonResponse(getPlatformConfig(c.env)));
 
 const domainSelect = {
   id: domains.id,

@@ -16,6 +16,8 @@ export function createRuntimeEnv(config: ServerConfig, db: AppDatabase): Env {
     CNAME_TARGET: config.cnameTarget,
     FALLBACK_ORIGIN: config.fallbackOrigin,
     PLATFORM_ZONE: config.platformZone,
+    DEPLOY_TARGET: config.deployTarget,
+    SERVER_IP: config.serverIp,
     CF_ACCOUNT_ID: config.cfAccountId,
     CF_API_TOKEN: config.cfApiToken,
     CF_ZONE_ID: config.cfZoneId,

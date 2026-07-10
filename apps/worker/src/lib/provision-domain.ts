@@ -1,6 +1,7 @@
 import type { Env } from "../env";
 import { createCustomHostname, mapSslStatus } from "./cf";
 import { bindPlatformWorkerDomain, buildDomainSetupGuide, getDomainKind } from "./domain-setup";
+import { getDeployTarget, getServerIp } from "./platform-config";
 
 export interface ProvisionDomainResult {
   sslStatus: "pending" | "active" | "failed" | "unknown";
@@ -15,6 +16,12 @@ export async function provisionDomain(env: Env, hostname: string): Promise<Provi
   let sslStatus: ProvisionDomainResult["sslStatus"] = "unknown";
   let cfCustomHostnameId: string | null = null;
 
+  if (getDeployTarget(env) === "self-hosted") {
+    const ip = getServerIp(env) ?? "服务器 IP";
+    warnings.push(`Ubuntu 自托管：请将 ${hostname} 的 DNS A 记录指向 ${ip}，并用 Certbot 配置 HTTPS。`);
+    return { sslStatus, cfCustomHostnameId, setup, warnings };
+  }
+
   if (setup.kind === "platform_subdomain") {
     const bind = await bindPlatformWorkerDomain(env, hostname);
     if (bind.ok) {
@@ -26,7 +33,6 @@ export async function provisionDomain(env: Env, hostname: string): Promise<Provi
     return { sslStatus, cfCustomHostnameId, setup, warnings };
   }
 
-  // 方案 A：客户自有域名 — 不在我方创建 Custom Hostname（证书在客户 CF）
   sslStatus = "unknown";
   warnings.push("方案 A：请客户在自己的 Cloudflare 完成 CNAME 解析，证书由客户账号自动签发。");
   return { sslStatus, cfCustomHostnameId, setup, warnings };

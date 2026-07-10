@@ -46,7 +46,7 @@ export async function checkDomainHealth(
       return {
         ok: false,
         status: "unhealthy",
-        message: "Worker 未处理该请求",
+        message: "服务未处理该请求",
         checkedAt,
       };
     }
@@ -79,7 +79,7 @@ export async function checkDomainHealth(
       ok: false,
       status: "unhealthy",
       statusCode,
-      message: statusCode === 403 ? "403 禁止访问，检查 Worker 绑定" : `HTTP ${statusCode}`,
+      message: statusCode === 403 ? "403 禁止访问，检查 Nginx 配置" : `HTTP ${statusCode}`,
       checkedAt,
     };
   } catch (error) {
