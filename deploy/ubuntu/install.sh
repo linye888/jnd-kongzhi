@@ -113,7 +113,7 @@ if [[ "$SKIP_BUILD" -eq 0 ]]; then
   echo "==> 安装依赖并构建"
   cd "$APP_DIR/src"
   sudo -u "$APP_USER" pnpm install --frozen-lockfile 2>/dev/null || sudo -u "$APP_USER" pnpm install
-  sudo -u "$APP_USER" bash -c "cd apps/admin && VITE_API_BASE=https://${DOMAIN} pnpm build"
+  sudo -u "$APP_USER" bash -c "cd apps/admin && VITE_BASE_PATH=/admin/ VITE_API_BASE=https://${DOMAIN} pnpm build"
   rsync -a "$APP_DIR/src/apps/admin/dist/" "$APP_DIR/admin/"
 fi
 

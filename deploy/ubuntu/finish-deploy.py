@@ -20,7 +20,7 @@ fi
 sudo -u lpadmin $PNPM --filter @lp-admin/shared build
 sudo -u lpadmin $PNPM --filter @lp-admin/db build
 sudo -u lpadmin $PNPM --filter @lp-admin/templates build
-sudo -u lpadmin bash -lc "cd /opt/lp-admin/src/apps/admin && VITE_API_BASE=http://$HOST_IP $PNPM build"
+sudo -u lpadmin bash -lc "cd /opt/lp-admin/src/apps/admin && VITE_BASE_PATH=/admin/ VITE_API_BASE=http://$HOST_IP $PNPM build"
 sudo rsync -a /opt/lp-admin/src/apps/admin/dist/ /opt/lp-admin/admin/
 cd /opt/lp-admin/src/apps/server
 sudo -u lpadmin $PNPM db:migrate

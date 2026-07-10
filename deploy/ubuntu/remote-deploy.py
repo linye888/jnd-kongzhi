@@ -62,7 +62,7 @@ sudo chown lpadmin:lpadmin /opt/lp-admin/src/apps/server/.env
 echo '==> 安装依赖并构建'
 cd /opt/lp-admin/src
 sudo -u lpadmin $PNPM install
-sudo -u lpadmin bash -lc "cd /opt/lp-admin/src/apps/admin && VITE_API_BASE=http://{HOST} /usr/bin/pnpm build"
+sudo -u lpadmin bash -lc "cd /opt/lp-admin/src/apps/admin && VITE_BASE_PATH=/admin/ VITE_API_BASE=http://{HOST} /usr/bin/pnpm build"
 sudo rsync -a /opt/lp-admin/src/apps/admin/dist/ /opt/lp-admin/admin/
 
 echo '==> 初始化数据库'

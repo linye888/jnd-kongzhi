@@ -61,7 +61,7 @@ cp apps/server/.env.example apps/server/.env
 ```bash
 # 构建管理后台（API 地址指向你的域名）
 cd apps/admin
-VITE_API_BASE=http://localhost:3000 pnpm build
+VITE_API_BASE=http://localhost:3000 VITE_BASE_PATH=/admin/ pnpm build
 
 # 将构建产物复制到 server 可读取的目录
 mkdir -p ../server/admin
