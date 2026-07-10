@@ -1,7 +1,8 @@
 import { drizzle } from "drizzle-orm/d1";
-import type { Env } from "./env";
+import type { Env } from "../env";
 
 export function getDb(env: Env) {
+  if (env._db) return env._db;
   return drizzle(env.DB);
 }
 

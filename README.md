@@ -7,10 +7,21 @@
 ```
 apps/admin     → React 管理后台 (Vite)
 apps/worker    → Cloudflare Worker (Hono + D1 + KV + R2)
+apps/server    → Ubuntu 自托管 Node.js 服务 (Hono + SQLite)
 packages/db    → Drizzle ORM + D1 migrations
 packages/templates → 落地页 HTML 模板渲染
 packages/shared    → 共享 TypeScript 类型
 legacy/        → 原始静态落地页参考 (jnd-kongzhi)
+```
+
+## Ubuntu 自托管部署
+
+若需在自有 Ubuntu 服务器部署（不依赖 Cloudflare Workers），请参阅 **[docs/DEPLOY-UBUNTU.md](docs/DEPLOY-UBUNTU.md)**。
+
+快速开始：
+
+```bash
+sudo bash deploy/ubuntu/install.sh --domain yourdomain.com --email you@example.com
 ```
 
 ## 功能

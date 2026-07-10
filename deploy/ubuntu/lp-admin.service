@@ -1,0 +1,18 @@
+[Unit]
+Description=LP Admin Server (API + Landing Pages)
+After=network.target
+
+[Service]
+Type=simple
+User=lpadmin
+Group=lpadmin
+WorkingDirectory=__APP_DIR__/src/apps/server
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/pnpm start
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:__APP_DIR__/logs/server.log
+StandardError=append:__APP_DIR__/logs/server.error.log
+
+[Install]
+WantedBy=multi-user.target

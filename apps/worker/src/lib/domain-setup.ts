@@ -11,18 +11,23 @@ export interface DomainSetupGuide {
   note?: string;
 }
 
-const PLATFORM_ZONE = "minishort.sbs";
+const DEFAULT_PLATFORM_ZONE = "minishort.sbs";
 
-export function getDomainKind(hostname: string): DomainKind {
+export function getPlatformZone(env?: Env): string {
+  return env?.PLATFORM_ZONE ?? DEFAULT_PLATFORM_ZONE;
+}
+
+export function getDomainKind(hostname: string, env?: Env): DomainKind {
+  const platformZone = getPlatformZone(env);
   const host = hostname.toLowerCase();
-  if (host === PLATFORM_ZONE || host.endsWith(`.${PLATFORM_ZONE}`)) return "platform_subdomain";
+  if (host === platformZone || host.endsWith(`.${platformZone}`)) return "platform_subdomain";
   return "customer_owned";
 }
 
 export function buildDomainSetupGuide(env: Env, hostname: string): DomainSetupGuide {
-  const originTarget = env.FALLBACK_ORIGIN ?? "origin.minishort.sbs";
-  const cnameTarget = env.CNAME_TARGET ?? "customers.minishort.sbs";
-  const kind = getDomainKind(hostname);
+  const originTarget = env.FALLBACK_ORIGIN ?? `origin.${getPlatformZone(env)}`;
+  const cnameTarget = env.CNAME_TARGET ?? `customers.${getPlatformZone(env)}`;
+  const kind = getDomainKind(hostname, env);
 
   if (kind === "platform_subdomain") {
     return {
@@ -61,8 +66,8 @@ export async function bindPlatformWorkerDomain(
   env: Env,
   hostname: string,
 ): Promise<{ ok: boolean; message?: string }> {
-  if (getDomainKind(hostname) !== "platform_subdomain") {
-    return { ok: false, message: "仅支持 minishort.sbs 子域名自动绑定" };
+  if (getDomainKind(hostname, env) !== "platform_subdomain") {
+    return { ok: false, message: `仅支持 ${getPlatformZone(env)} 子域名自动绑定` };
   }
   if (!env.CF_ACCOUNT_ID || !env.CF_API_TOKEN || !env.CF_ZONE_ID) {
     return { ok: false, message: "未配置 Cloudflare API 凭证" };
