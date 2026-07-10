@@ -5,7 +5,6 @@ import type { Env } from "../../env";
 import { authMiddleware } from "../../middleware/auth";
 import { buildDomainSetupGuide, bindPlatformWorkerDomain } from "../../lib/domain-setup";
 import { getPlatformConfig } from "../../lib/platform-config";
-import { getCustomHostnameStatus, mapSslStatus } from "../../lib/cf";
 import {
   applyLandingTemplate,
   createLandingPageForDomain,
@@ -83,6 +82,32 @@ app.post("/health-check", async (c) => {
 
   const results = await checkDomainsHealth(c.env, rows);
   return jsonResponse({ results });
+});
+
+app.post("/rebind-platform", async (c) => {
+  const db = getDb(c.env);
+  const platformZone = getPlatformConfig(c.env).platformZone;
+  const rows = await db.select().from(domains).orderBy(domains.id);
+  const targets = rows.filter(
+    (row) => row.hostname === platformZone || row.hostname.endsWith(`.${platformZone}`),
+  );
+
+  const results: Array<{ id: number; hostname: string; ok: boolean; message: string }> = [];
+  for (const row of targets) {
+    const bind = await bindPlatformWorkerDomain(c.env, row.hostname);
+    if (bind.ok) {
+      await db.update(domains).set({ sslStatus: "active", updatedAt: nowIso() }).where(eq(domains.id, row.id));
+      await invalidateDomainCache(c.env, row.hostname);
+    }
+    results.push({
+      id: row.id,
+      hostname: row.hostname,
+      ok: bind.ok,
+      message: bind.message ?? (bind.ok ? "已绑定" : "绑定失败"),
+    });
+  }
+
+  return jsonResponse({ platformZone, results });
 });
 
 app.get("/:id/health", async (c) => {

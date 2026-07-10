@@ -87,6 +87,8 @@ export default function DomainsPage() {
   const [lastSetup, setLastSetup] = useState<DomainSetupGuide | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [bindingId, setBindingId] = useState<number | null>(null);
+  const [platformZone, setPlatformZone] = useState("minishort.sbs");
   const [hostnamePlaceholder, setHostnamePlaceholder] = useState("your-domain.com");
 
   async function load(silent = false) {
@@ -136,7 +138,10 @@ export default function DomainsPage() {
 
   useEffect(() => {
     getPlatformConfig()
-      .then((platform) => setHostnamePlaceholder(domainPlaceholder(platform)))
+      .then((platform) => {
+        setPlatformZone(platform.platformZone);
+        setHostnamePlaceholder(domainPlaceholder(platform));
+      })
       .catch(console.error);
 
     api<LandingTemplateOption[]>("/api/admin/templates")
@@ -242,6 +247,25 @@ export default function DomainsPage() {
     setError("");
     await api(`/api/admin/domains/${id}`, { method: "PUT", body: JSON.stringify({ status }) });
     await load(true);
+  }
+
+  async function bindWorker(id: number, hostname: string) {
+    setBindingId(id);
+    setError("");
+    try {
+      const result = await api<{ message?: string }>(`/api/admin/domains/${id}/bind-worker`, { method: "POST" });
+      setMessage(result.message ?? `已绑定 Worker：${hostname}`);
+      await load(true);
+      await runHealthCheck([id]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "绑定 Worker 失败");
+    } finally {
+      setBindingId(null);
+    }
+  }
+
+  function isPlatformSubdomain(hostname: string) {
+    return hostname === platformZone || hostname.endsWith(`.${platformZone}`);
   }
 
   async function deleteDomain(id: number, hostname: string) {
@@ -374,6 +398,17 @@ export default function DomainsPage() {
                     <Link className="link" to={`/domains/${row.id}`}>{row.hostname}</Link>
                     <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
                       SSL: <span className={`badge ${row.sslStatus}`}>{row.sslStatus}</span>
+                      {isPlatformSubdomain(row.hostname) && row.sslStatus !== "active" ? (
+                        <button
+                          type="button"
+                          className="link"
+                          style={{ marginLeft: 8, padding: 0, border: "none", background: "none", cursor: "pointer" }}
+                          disabled={bindingId === row.id}
+                          onClick={() => bindWorker(row.id, row.hostname)}
+                        >
+                          {bindingId === row.id ? "绑定中…" : "绑定 Worker"}
+                        </button>
+                      ) : null}
                     </div>
                   </td>
                   <td>

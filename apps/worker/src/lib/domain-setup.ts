@@ -1,4 +1,5 @@
 import type { Env } from "../env";
+import { createProxiedSubdomainRecord } from "./cf";
 import { getDeployTarget, getPlatformConfig, getServerIp, isIpAddress } from "./platform-config";
 
 export type DomainKind = "platform_subdomain" | "customer_owned";
@@ -165,5 +166,11 @@ export async function bindPlatformWorkerDomain(
   if (err?.code === 100117) {
     return { ok: true, message: "Worker 域名可能已绑定" };
   }
-  return { ok: false, message: err?.message ?? "Worker 域名绑定失败" };
+
+  const dnsFallback = await createProxiedSubdomainRecord(env, hostname, getPlatformZone(env));
+  if (dnsFallback.ok) {
+    return { ok: true, message: dnsFallback.message ?? "Worker 路由 + DNS 已配置" };
+  }
+
+  return { ok: false, message: err?.message ?? dnsFallback.message ?? "Worker 域名绑定失败" };
 }

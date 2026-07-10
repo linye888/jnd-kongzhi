@@ -74,3 +74,62 @@ export function mapSslStatus(cfStatus: string | null | undefined): "pending" | "
   if (cfStatus === "deleted" || cfStatus === "validation_timed_out" || cfStatus === "issuance_timed_out") return "failed";
   return "unknown";
 }
+
+interface DnsRecordResult {
+  ok: boolean;
+  message?: string;
+}
+
+/** 为平台子域创建橙云 A 记录，配合 Worker 路由使用（Workers Domains API 失败时的兜底） */
+export async function createProxiedSubdomainRecord(env: Env, hostname: string, platformZone: string): Promise<DnsRecordResult> {
+  if (!env.CF_API_TOKEN || !env.CF_ZONE_ID) {
+    return { ok: false, message: "未配置 Cloudflare API 凭证" };
+  }
+
+  const host = hostname.toLowerCase();
+  const zone = platformZone.toLowerCase();
+  if (host !== zone && !host.endsWith(`.${zone}`)) {
+    return { ok: false, message: "非平台子域" };
+  }
+
+  const recordName = host === zone ? zone : host.slice(0, -(zone.length + 1));
+
+  const listRes = await fetch(
+    `https://api.cloudflare.com/client/v4/zones/${env.CF_ZONE_ID}/dns_records?name=${encodeURIComponent(hostname)}`,
+    { headers: { Authorization: `Bearer ${env.CF_API_TOKEN}` } },
+  );
+  const listPayload = (await listRes.json()) as { success: boolean; result?: Array<{ id: string }> };
+  if (listPayload.success && listPayload.result?.length) {
+    return { ok: true, message: "DNS 记录已存在" };
+  }
+
+  const createRes = await fetch(
+    `https://api.cloudflare.com/client/v4/zones/${env.CF_ZONE_ID}/dns_records`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.CF_API_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        type: "A",
+        name: recordName,
+        content: "192.0.2.1",
+        proxied: true,
+        ttl: 1,
+        comment: "lp-admin platform subdomain",
+      }),
+    },
+  );
+
+  const createPayload = (await createRes.json()) as { success: boolean; errors?: Array<{ message: string; code: number }> };
+  if (createPayload.success) {
+    return { ok: true, message: "已创建 DNS 记录（Worker 路由接管）" };
+  }
+
+  const err = createPayload.errors?.[0];
+  if (err?.code === 81057) {
+    return { ok: true, message: "DNS 记录已存在" };
+  }
+  return { ok: false, message: err?.message ?? "DNS 记录创建失败" };
+}
