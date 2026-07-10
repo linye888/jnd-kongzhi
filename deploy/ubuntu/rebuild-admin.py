@@ -29,7 +29,7 @@ sudo chown lpadmin:lpadmin /opt/lp-admin/src/apps/server/.env
 
 sudo -u lpadmin $PNPM --filter @lp-admin/shared build
 cd apps/admin
-sudo -u lpadmin bash -lc 'VITE_API_BASE=http://{HOST_IP} $PNPM build:ubuntu'
+sudo -u lpadmin env VITE_API_BASE=http://{HOST_IP} VITE_BASE_PATH=/admin/ VITE_DEPLOY_TARGET=self-hosted /usr/bin/pnpm run build:ubuntu
 sudo rsync -a /opt/lp-admin/src/apps/admin/dist/ /opt/lp-admin/admin/
 sudo systemctl restart lp-admin
 grep -E 'src=|href=' /opt/lp-admin/admin/index.html
