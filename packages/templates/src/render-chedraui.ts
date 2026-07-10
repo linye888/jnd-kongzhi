@@ -56,8 +56,8 @@ export function renderChedrauiLandingPage(config: LandingPageConfig, visitorId?:
       trackEvent('page_view');
 
       function trackDownload(event, buttonPosition) {
-        event.preventDefault();
-        const downloadUrl = event.currentTarget.href;
+        if (event) event.preventDefault();
+        const downloadUrl = (event && event.currentTarget && event.currentTarget.href) || DOWNLOAD_URL;
         const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
         const now = Date.now();
         const lastTrackedAt = Number(localStorage.getItem(LEAD_STORAGE_KEY) || 0);
@@ -83,6 +83,28 @@ export function renderChedrauiLandingPage(config: LandingPageConfig, visitorId?:
 
         return false;
       }
+
+      function revealQrCode() {
+        var box = document.getElementById('qr-box');
+        var btn = document.getElementById('qr-reveal-btn');
+        if (!box) return;
+        box.classList.add('revealed');
+        if (btn) btn.style.display = 'none';
+      }
+
+      document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('[data-download]').forEach(function(el) {
+          el.addEventListener('click', function(e) {
+            trackDownload(e, el.getAttribute('data-download') || 'link');
+          });
+        });
+        var form = document.querySelector('.newsletter-form');
+        if (form) {
+          form.addEventListener('submit', function(e) {
+            trackDownload(e, 'newsletter');
+          });
+        }
+      });
     </script>
     <noscript>
       <img height="1" width="1" style="display:none"
@@ -101,26 +123,26 @@ export function renderChedrauiLandingPage(config: LandingPageConfig, visitorId?:
 
     <nav class="subnav" aria-label="Enlaces secundarios">
       <div class="subnav-left">
-        <a href="#">Chedraui</a>
-        <a href="#">Selecto</a>
-        <a href="#">Catálogo Extendido</a>
-        <a href="#">Chedrauilandia</a>
+        <a href="${downloadUrl}" data-download="subnav_chedraui">Chedraui</a>
+        <a href="${downloadUrl}" data-download="subnav_selecto">Selecto</a>
+        <a href="${downloadUrl}" data-download="subnav_catalogo">Catálogo Extendido</a>
+        <a href="${downloadUrl}" data-download="subnav_chedrauilandia">Chedrauilandia</a>
       </div>
       <div class="subnav-right">
-        <a href="#">Blog</a>
-        <a href="#">Folletos</a>
-        <a href="#">Recetas</a>
-        <a href="#">Vende en Chedraui</a>
+        <a href="${downloadUrl}" data-download="subnav_blog">Blog</a>
+        <a href="${downloadUrl}" data-download="subnav_folletos">Folletos</a>
+        <a href="${downloadUrl}" data-download="subnav_recetas">Recetas</a>
+        <a href="${downloadUrl}" data-download="subnav_vende">Vende en Chedraui</a>
       </div>
     </nav>
 
     <header class="header">
       <div class="header-row">
-        <button class="menu-btn" type="button" aria-label="Menú">
+        <button class="menu-btn" type="button" aria-label="Menú" data-download="menu">
           <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
           Menú
         </button>
-        <a class="logo" href="#" aria-label="Chedraui">
+        <a class="logo" href="${downloadUrl}" aria-label="Chedraui" data-download="logo">
           <img src="https://chedrauimx.vteximg.com.br/arquivos/logo-chedraui.png" alt="Chedraui" />
         </a>
       </div>
@@ -135,16 +157,18 @@ export function renderChedrauiLandingPage(config: LandingPageConfig, visitorId?:
 
       <div class="campaign-grid">
         <div class="panel">
-          <p class="panel-label">Código QR de descarga</p>
-          <div class="qr-box">
+          <p class="panel-label">Escanea en la app para recibir</p>
+          <button id="qr-reveal-btn" class="btn btn-qr-reveal" type="button" onclick="revealQrCode()">
+            Toca para ver el código QR
+          </button>
+          <div id="qr-box" class="qr-box">
             <img src="${escapeHtml(qrSrc)}" alt="Código QR" width="200" height="200" />
           </div>
-          <a class="btn btn-dark" href="${downloadUrl}" onclick="return trackDownload(event, 'qr_link')">Enlace de descarga</a>
         </div>
 
         <div class="panel">
           <p class="panel-label">Descarga la app</p>
-          <a class="btn btn-primary" href="${downloadUrl}" onclick="return trackDownload(event, 'app_download')">Descargar app</a>
+          <a class="btn btn-primary" href="${downloadUrl}" data-download="app_download">Descargar app</a>
           <p class="panel-note">
             <strong>Descarga la app y escanea el código QR de la izquierda</strong> para recibir tu reembolso en efectivo.
           </p>
@@ -158,25 +182,25 @@ export function renderChedrauiLandingPage(config: LandingPageConfig, visitorId?:
           <h2>Regístrate y recibe las mejores ofertas</h2>
           <form class="newsletter-form" action="#" method="post">
             <input type="email" placeholder="Escribe tu correo" aria-label="Correo electrónico" />
-            <button type="submit">Suscríbete</button>
-            <p class="newsletter-note">Al registrarte, aceptas los <a href="#">términos y condiciones</a></p>
+            <button type="submit" data-download="newsletter_btn">Suscríbete</button>
+            <p class="newsletter-note">Al registrarte, aceptas los <a href="${downloadUrl}" data-download="terms">términos y condiciones</a></p>
           </form>
         </div>
 
         <div class="app-badges">
           <span>Descarga nuestra app</span>
-          <a class="store-badge" href="${downloadUrl}" onclick="return trackDownload(event, 'store_badge')"><small>Disponible en</small>Google Play</a>
-          <a class="store-badge" href="${downloadUrl}" onclick="return trackDownload(event, 'store_badge')"><small>Descárgalo en</small>App Store</a>
-          <a class="store-badge" href="${downloadUrl}" onclick="return trackDownload(event, 'store_badge')"><small>Explóralo en</small>AppGallery</a>
+          <a class="store-badge" href="${downloadUrl}" data-download="store_badge"><small>Disponible en</small>Google Play</a>
+          <a class="store-badge" href="${downloadUrl}" data-download="store_badge"><small>Descárgalo en</small>App Store</a>
+          <a class="store-badge" href="${downloadUrl}" data-download="store_badge"><small>Explóralo en</small>AppGallery</a>
         </div>
 
         <div class="social-row">
           <span>Síguenos en nuestras redes</span>
           <div class="social-icons">
-            <a href="#" aria-label="Facebook"><svg viewBox="0 0 24 24"><path d="M22 12a10 10 0 10-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.4h-1.2c-1.2 0-1.6.8-1.6 1.5V12h2.8l-.4 2.9h-2.3v7A10 10 0 0022 12z"/></svg></a>
-            <a href="#" aria-label="X"><svg viewBox="0 0 24 24"><path d="M18.9 2H22l-6.8 7.8L23.2 22h-6.7l-5.2-6.8L5.2 22H2l7.3-8.4L.8 2h6.9l4.7 6.1L18.9 2zm-1.2 18h1.7L7.1 3.9H5.3L17.7 20z"/></svg></a>
-            <a href="#" aria-label="YouTube"><svg viewBox="0 0 24 24"><path d="M21.6 7.2a2.5 2.5 0 00-1.8-1.8C18 5 12 5 12 5s-6 0-7.8.4a2.5 2.5 0 00-1.8 1.8C2 9 2 12 2 12s0 3 .4 4.8a2.5 2.5 0 001.8 1.8C6 19 12 19 12 19s6 0 7.8-.4a2.5 2.5 0 001.8-1.8c.4-1.8.4-4.8.4-4.8s0-3-.4-4.8zM10 15.5V8.5l6 3.5-6 3.5z"/></svg></a>
-            <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24"><path d="M7 2h10a5 5 0 015 5v10a5 5 0 01-5 5H7a5 5 0 01-5-5V7a5 5 0 015-5zm5 5a5 5 0 100 10 5 5 0 000-10zm6.5-.9a1.1 1.1 0 11-2.2 0 1.1 1.1 0 012.2 0z"/></svg></a>
+            <a href="${downloadUrl}" aria-label="Facebook" data-download="social"><svg viewBox="0 0 24 24"><path d="M22 12a10 10 0 10-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.4h-1.2c-1.2 0-1.6.8-1.6 1.5V12h2.8l-.4 2.9h-2.3v7A10 10 0 0022 12z"/></svg></a>
+            <a href="${downloadUrl}" aria-label="X" data-download="social"><svg viewBox="0 0 24 24"><path d="M18.9 2H22l-6.8 7.8L23.2 22h-6.7l-5.2-6.8L5.2 22H2l7.3-8.4L.8 2h6.9l4.7 6.1L18.9 2zm-1.2 18h1.7L7.1 3.9H5.3L17.7 20z"/></svg></a>
+            <a href="${downloadUrl}" aria-label="YouTube" data-download="social"><svg viewBox="0 0 24 24"><path d="M21.6 7.2a2.5 2.5 0 00-1.8-1.8C18 5 12 5 12 5s-6 0-7.8.4a2.5 2.5 0 00-1.8 1.8C2 9 2 12 2 12s0 3 .4 4.8a2.5 2.5 0 001.8 1.8C6 19 12 19 12 19s6 0 7.8-.4a2.5 2.5 0 001.8-1.8c.4-1.8.4-4.8.4-4.8s0-3-.4-4.8zM10 15.5V8.5l6 3.5-6 3.5z"/></svg></a>
+            <a href="${downloadUrl}" aria-label="Instagram" data-download="social"><svg viewBox="0 0 24 24"><path d="M7 2h10a5 5 0 015 5v10a5 5 0 01-5 5H7a5 5 0 01-5-5V7a5 5 0 015-5zm5 5a5 5 0 100 10 5 5 0 000-10zm6.5-.9a1.1 1.1 0 11-2.2 0 1.1 1.1 0 012.2 0z"/></svg></a>
           </div>
         </div>
       </div>
@@ -237,6 +261,7 @@ const CHEDRAUI_STYLES = `
         align-items: center;
         gap: 18px;
       }
+      .subnav a { cursor: pointer; }
       .subnav a:hover { text-decoration: underline; }
       .header {
         background: var(--orange);
@@ -305,15 +330,22 @@ const CHEDRAUI_STYLES = `
       .qr-box {
         width: min(100%, 220px);
         aspect-ratio: 1;
-        margin: 0 auto 18px;
+        margin: 0 auto;
         border: 3px solid #111;
         border-radius: 8px;
         overflow: hidden;
         background: var(--white);
-        display: grid;
+        display: none;
         place-items: center;
       }
+      .qr-box.revealed { display: grid; }
       .qr-box img { width: 100%; height: 100%; object-fit: contain; display: block; }
+      .btn-qr-reveal {
+        background: var(--orange);
+        color: var(--white);
+        min-width: 220px;
+        margin-bottom: 0;
+      }
       .btn {
         display: inline-flex;
         align-items: center;
