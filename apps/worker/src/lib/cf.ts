@@ -95,7 +95,7 @@ export async function createProxiedSubdomainRecord(env: Env, hostname: string, p
   const recordName = host === zone ? zone : host.slice(0, -(zone.length + 1));
 
   const listRes = await fetch(
-    `https://api.cloudflare.com/client/v4/zones/${env.CF_ZONE_ID}/dns_records?name=${encodeURIComponent(hostname)}`,
+    `https://api.cloudflare.com/client/v4/zones/${env.CF_ZONE_ID}/dns_records?type=A&name=${encodeURIComponent(recordName === zone ? zone : `${recordName}.${zone}`)}`,
     { headers: { Authorization: `Bearer ${env.CF_API_TOKEN}` } },
   );
   const listPayload = (await listRes.json()) as { success: boolean; result?: Array<{ id: string }> };
@@ -132,4 +132,51 @@ export async function createProxiedSubdomainRecord(env: Env, hostname: string, p
     return { ok: true, message: "DNS 记录已存在" };
   }
   return { ok: false, message: err?.message ?? "DNS 记录创建失败" };
+}
+
+/** 创建 *.platformZone 通配符橙云 A 记录，所有子域一次生效 */
+export async function ensureWildcardPlatformDns(env: Env, platformZone: string): Promise<DnsRecordResult> {
+  if (!env.CF_API_TOKEN || !env.CF_ZONE_ID) {
+    return { ok: false, message: "未配置 Cloudflare API 凭证" };
+  }
+
+  const wildcardFqdn = `*.${platformZone}`;
+  const listRes = await fetch(
+    `https://api.cloudflare.com/client/v4/zones/${env.CF_ZONE_ID}/dns_records?type=A&name=${encodeURIComponent(wildcardFqdn)}`,
+    { headers: { Authorization: `Bearer ${env.CF_API_TOKEN}` } },
+  );
+  const listPayload = (await listRes.json()) as { success: boolean; result?: Array<{ id: string }> };
+  if (listPayload.success && listPayload.result?.length) {
+    return { ok: true, message: "通配符 DNS 已存在" };
+  }
+
+  const createRes = await fetch(
+    `https://api.cloudflare.com/client/v4/zones/${env.CF_ZONE_ID}/dns_records`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${env.CF_API_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        type: "A",
+        name: "*",
+        content: "192.0.2.1",
+        proxied: true,
+        ttl: 1,
+        comment: "lp-admin wildcard platform subdomains",
+      }),
+    },
+  );
+
+  const createPayload = (await createRes.json()) as { success: boolean; errors?: Array<{ message: string; code: number }> };
+  if (createPayload.success) {
+    return { ok: true, message: "已创建通配符 DNS（*.platformZone）" };
+  }
+
+  const err = createPayload.errors?.[0];
+  if (err?.code === 81057) {
+    return { ok: true, message: "通配符 DNS 已存在" };
+  }
+  return { ok: false, message: err?.message ?? "通配符 DNS 创建失败" };
 }
