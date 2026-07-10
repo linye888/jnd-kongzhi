@@ -110,19 +110,22 @@ export async function detachWorkerCustomDomain(env: Env, hostname: string): Prom
 
   const listRes = await cfFetch(
     env,
-    `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/workers/domains?hostname=${encodeURIComponent(hostname)}`,
+    `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/workers/domains`,
   );
   const listPayload = (await listRes.json()) as {
     success: boolean;
     result?: Array<{ id: string; hostname: string }>;
   };
 
-  if (!listPayload.success || !listPayload.result?.length) {
+  const matches = (listPayload.result ?? []).filter(
+    (item) => item.hostname.toLowerCase() === hostname.toLowerCase(),
+  );
+
+  if (!listPayload.success || matches.length === 0) {
     return { ok: true, message: "Worker 自定义域未绑定" };
   }
 
-  for (const item of listPayload.result) {
-    if (item.hostname.toLowerCase() !== hostname.toLowerCase()) continue;
+  for (const item of matches) {
     await cfFetch(
       env,
       `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/workers/domains/${item.id}`,
@@ -172,17 +175,30 @@ export async function restoreAdminPagesDns(env: Env, platformZone: string): Prom
     const hasCorrectCname = listPayload.result.some(
       (record) => record.type === "CNAME" && record.content.replace(/\.$/, "") === pagesTarget,
     );
-    if (hasCorrectCname) {
-      return { ok: true, message: "Admin Pages DNS 已正确" };
+    if (!hasCorrectCname) {
+      for (const record of listPayload.result) {
+        await cfFetch(
+          env,
+          `https://api.cloudflare.com/client/v4/zones/${env.CF_ZONE_ID}/dns_records/${record.id}`,
+          { method: "DELETE" },
+        );
+      }
     }
+  }
 
-    for (const record of listPayload.result) {
-      await cfFetch(
-        env,
-        `https://api.cloudflare.com/client/v4/zones/${env.CF_ZONE_ID}/dns_records/${record.id}`,
-        { method: "DELETE" },
-      );
-    }
+  const verifyRes = await cfFetch(
+    env,
+    `https://api.cloudflare.com/client/v4/zones/${env.CF_ZONE_ID}/dns_records?name=${encodeURIComponent(adminFqdn)}`,
+  );
+  const verifyPayload = (await verifyRes.json()) as {
+    success: boolean;
+    result?: Array<{ type: string; content: string }>;
+  };
+  const hasCname = verifyPayload.result?.some(
+    (record) => record.type === "CNAME" && record.content.replace(/\.$/, "") === pagesTarget,
+  );
+  if (hasCname) {
+    return { ok: true, message: "Admin Pages DNS 已正确" };
   }
 
   const createRes = await cfFetch(env, `https://api.cloudflare.com/client/v4/zones/${env.CF_ZONE_ID}/dns_records`, {
