@@ -3,15 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Centro de ayuda Chedraui - Registro y creación de cuenta" />
-    <title>Registro y creación de cuenta | Chedraui</title>
+    <meta name="description" content="Chedraui - 10° aniversario reembolso en efectivo" />
+    <title>Chedraui | 10° Aniversario - Reembolso en Efectivo</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet" />
     <style>
       :root {
         --orange: #f58220;
-        --orange-dark: #e86f0a;
         --blue-title: #0077c8;
         --blue-link: #0077c8;
         --text: #333333;
@@ -22,9 +21,7 @@
         --yellow-btn: #ffc220;
       }
 
-      * {
-        box-sizing: border-box;
-      }
+      * { box-sizing: border-box; }
 
       body {
         margin: 0;
@@ -33,12 +30,8 @@
         background: var(--bg);
       }
 
-      a {
-        color: inherit;
-        text-decoration: none;
-      }
+      a { color: inherit; text-decoration: none; }
 
-      /* ── Top promo bar ── */
       .promo-bar {
         background: var(--orange);
         color: var(--white);
@@ -53,9 +46,7 @@
         text-align: center;
       }
 
-      .promo-bar strong {
-        font-weight: 700;
-      }
+      .promo-bar strong { font-weight: 700; }
 
       .promo-item {
         display: inline-flex;
@@ -67,10 +58,8 @@
         width: 18px;
         height: 18px;
         fill: currentColor;
-        flex: 0 0 auto;
       }
 
-      /* ── Sub nav ── */
       .subnav {
         background: var(--orange);
         border-top: 1px solid rgba(255, 255, 255, 0.15);
@@ -84,32 +73,34 @@
         min-height: 36px;
       }
 
-      .subnav-left,
-      .subnav-right {
+      .subnav-left, .subnav-right {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
         gap: 18px;
       }
 
-      .subnav a:hover {
-        text-decoration: underline;
-      }
+      .subnav a:hover { text-decoration: underline; }
 
-      /* ── Main header ── */
       .header {
         background: var(--orange);
-        padding: 14px 24px 18px;
+        padding: 16px 24px 20px;
         color: var(--white);
       }
 
       .header-row {
+        max-width: 1200px;
+        margin: 0 auto;
         display: flex;
         align-items: center;
-        gap: 16px;
+        justify-content: center;
+        gap: 20px;
+        position: relative;
       }
 
       .menu-btn {
+        position: absolute;
+        left: 0;
         display: flex;
         align-items: center;
         gap: 8px;
@@ -121,7 +112,6 @@
         font-weight: 500;
         cursor: pointer;
         padding: 0;
-        white-space: nowrap;
       }
 
       .menu-btn svg {
@@ -130,251 +120,122 @@
         fill: currentColor;
       }
 
-      .logo {
-        flex: 0 0 auto;
-      }
-
       .logo img {
         display: block;
-        height: 42px;
+        height: 46px;
         width: auto;
       }
 
-      .search-wrap {
-        flex: 1;
-        max-width: 720px;
+      .campaign {
+        max-width: 980px;
         margin: 0 auto;
-        position: relative;
+        padding: 36px 24px 56px;
       }
 
-      .search-wrap input {
-        width: 100%;
-        height: 44px;
-        border: none;
-        border-radius: 999px;
-        padding: 0 48px 0 20px;
-        font: inherit;
-        font-size: 15px;
+      .campaign-title {
+        margin: 0 0 32px;
+        text-align: center;
+        font-size: clamp(22px, 4vw, 34px);
+        font-weight: 900;
+        line-height: 1.35;
+        color: #d35400;
+      }
+
+      .campaign-title .amount {
+        color: var(--blue-title);
+      }
+
+      .campaign-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 28px;
+        align-items: start;
+      }
+
+      .panel {
+        background: var(--white);
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        padding: 28px 24px;
+        text-align: center;
+      }
+
+      .panel-label {
+        margin: 0 0 18px;
+        font-size: 18px;
+        font-weight: 700;
         color: var(--text);
-        outline: none;
       }
 
-      .search-wrap button {
-        position: absolute;
-        right: 6px;
-        top: 50%;
-        transform: translateY(-50%);
-        width: 34px;
-        height: 34px;
-        border: none;
-        border-radius: 50%;
-        background: transparent;
-        cursor: pointer;
+      .qr-box {
+        width: min(100%, 220px);
+        aspect-ratio: 1;
+        margin: 0 auto 18px;
+        border: 3px solid #111;
+        border-radius: 8px;
+        overflow: hidden;
+        background: var(--white);
         display: grid;
         place-items: center;
       }
 
-      .search-wrap button svg {
-        width: 20px;
-        height: 20px;
-        fill: var(--muted);
-      }
-
-      .header-actions {
-        display: flex;
-        align-items: center;
-        gap: 18px;
-        flex: 0 0 auto;
-      }
-
-      .header-action {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 13px;
-        line-height: 1.2;
-        white-space: nowrap;
-      }
-
-      .header-action svg {
-        width: 24px;
-        height: 24px;
-        fill: currentColor;
-        flex: 0 0 auto;
-      }
-
-      .header-action small {
-        display: block;
-        font-size: 11px;
-        opacity: 0.9;
-      }
-
-      .cart-icon {
-        position: relative;
-      }
-
-      .cart-icon svg {
-        width: 28px;
-        height: 28px;
-      }
-
-      /* ── Breadcrumb ── */
-      .breadcrumb {
-        background: var(--white);
-        border-bottom: 1px solid var(--border);
-        padding: 12px 24px;
-        font-size: 13px;
-        color: var(--muted);
-      }
-
-      .breadcrumb a {
-        color: var(--muted);
-      }
-
-      .breadcrumb a:hover {
-        color: var(--blue-link);
-        text-decoration: underline;
-      }
-
-      .breadcrumb span {
-        color: var(--text);
-      }
-
-      /* ── Layout ── */
-      .page-wrap {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 28px 24px 48px;
-        display: grid;
-        grid-template-columns: 280px 1fr;
-        gap: 32px;
-        align-items: start;
-      }
-
-      /* ── Sidebar ── */
-      .sidebar-title {
-        font-size: 14px;
-        color: var(--muted);
-        margin: 0 0 16px;
-        font-weight: 400;
-      }
-
-      .sidebar-nav {
-        list-style: none;
-        margin: 0;
-        padding: 0;
-      }
-
-      .sidebar-nav li + li {
-        margin-top: 4px;
-      }
-
-      .sidebar-nav a {
-        display: block;
-        padding: 12px 16px 12px 14px;
-        border-left: 4px solid transparent;
-        font-size: 15px;
-        color: var(--muted);
-        border-radius: 0 4px 4px 0;
-      }
-
-      .sidebar-nav a:hover {
-        background: rgba(245, 130, 32, 0.08);
-        color: var(--orange);
-      }
-
-      .sidebar-nav a.active {
-        color: var(--orange);
-        font-weight: 700;
-        border-left-color: var(--orange);
-        background: var(--white);
-      }
-
-      /* ── Main content ── */
-      .main-title {
-        margin: 0 0 24px;
-        font-size: 28px;
-        font-weight: 700;
-        color: var(--blue-title);
-        line-height: 1.2;
-      }
-
-      .faq-list {
-        display: grid;
-        gap: 16px;
-      }
-
-      .faq-item {
-        background: var(--white);
-        border-radius: 8px;
-        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-        overflow: hidden;
-      }
-
-      .faq-trigger {
+      .qr-box img {
         width: 100%;
-        border: none;
-        background: var(--white);
-        padding: 20px 24px;
-        display: flex;
+        height: 100%;
+        object-fit: contain;
+        display: block;
+      }
+
+      .btn {
+        display: inline-flex;
         align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-        cursor: pointer;
-        text-align: left;
+        justify-content: center;
+        min-height: 48px;
+        padding: 0 28px;
+        border: none;
+        border-radius: 6px;
         font: inherit;
-      }
-
-      .faq-trigger:hover {
-        background: #fafafa;
-      }
-
-      .faq-question {
         font-size: 16px;
         font-weight: 700;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+      }
+
+      .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+      }
+
+      .btn-dark {
+        background: #111;
+        color: var(--white);
+        min-width: 180px;
+      }
+
+      .btn-primary {
+        background: var(--orange);
+        color: var(--white);
+        min-width: 220px;
+        font-size: 18px;
+        min-height: 56px;
+        margin-bottom: 20px;
+      }
+
+      .panel-note {
+        margin: 0;
+        font-size: 15px;
+        line-height: 1.65;
+        color: var(--muted);
+      }
+
+      .panel-note strong {
         color: var(--text);
       }
 
-      .faq-meta {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex: 0 0 auto;
-        color: var(--blue-link);
-        font-size: 14px;
-        font-weight: 500;
-      }
-
-      .faq-meta svg {
-        width: 16px;
-        height: 16px;
-        fill: var(--orange);
-        transition: transform 0.2s ease;
-      }
-
-      .faq-item.open .faq-meta svg {
-        transform: rotate(180deg);
-      }
-
-      .faq-body {
-        display: none;
-        padding: 0 24px 20px;
-        font-size: 14px;
-        line-height: 1.6;
-        color: var(--muted);
-        border-top: 1px solid var(--border);
-      }
-
-      .faq-item.open .faq-body {
-        display: block;
-        padding-top: 16px;
-      }
-
-      /* ── Footer ── */
       .footer {
         background: var(--orange);
         color: var(--white);
-        padding: 36px 24px 28px;
+        padding: 36px 24px 32px;
       }
 
       .footer-inner {
@@ -431,11 +292,39 @@
         width: 100%;
         margin: 0;
         font-size: 12px;
-        opacity: 0.95;
       }
 
-      .newsletter-note a {
-        text-decoration: underline;
+      .newsletter-note a { text-decoration: underline; }
+
+      .app-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .app-badges span {
+        font-size: 15px;
+        font-weight: 500;
+        margin-right: 8px;
+      }
+
+      .store-badge {
+        display: inline-block;
+        background: #111;
+        color: var(--white);
+        border-radius: 8px;
+        padding: 10px 16px;
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.2;
+      }
+
+      .store-badge small {
+        display: block;
+        font-size: 10px;
+        font-weight: 400;
+        opacity: 0.85;
       }
 
       .social-row {
@@ -445,21 +334,9 @@
         gap: 16px;
       }
 
-      .social-row span {
-        font-size: 16px;
-        font-weight: 500;
-      }
-
       .social-icons {
         display: flex;
         gap: 14px;
-      }
-
-      .social-icons a {
-        width: 28px;
-        height: 28px;
-        display: grid;
-        place-items: center;
       }
 
       .social-icons svg {
@@ -468,47 +345,32 @@
         fill: var(--white);
       }
 
-      @media (max-width: 900px) {
-        .page-wrap {
-          grid-template-columns: 1fr;
-        }
-
-        .header-row {
-          flex-wrap: wrap;
-        }
-
-        .search-wrap {
-          order: 3;
-          width: 100%;
-          max-width: none;
-        }
-
-        .subnav {
-          display: none;
-        }
-
-        .header-actions .header-action span {
-          display: none;
-        }
+      @media (max-width: 768px) {
+        .campaign-grid { grid-template-columns: 1fr; }
+        .subnav { display: none; }
+        .menu-btn { position: static; }
+        .header-row { justify-content: space-between; }
       }
     </style>
   </head>
   <body>
-    <!-- Top promo -->
+    <script>
+      // 修改这里的链接即可
+      window.CHEDRAUI_CONFIG = {
+        downloadUrl: "https://example.com/app.apk",
+        qrUrl: "https://example.com/app.apk",
+      };
+    </script>
+
     <div class="promo-bar">
       <div class="promo-item">
-        <svg class="promo-icon" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/>
-        </svg>
+        <svg class="promo-icon" viewBox="0 0 24 24"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
         <strong>Envío gratis</strong>
       </div>
-      <div>
-        En la compra mínima de $1,399 en productos de Supermercado. (excepto en productos de Catálogo extendido)
-      </div>
+      <div>En la compra mínima de $1,399 en productos de Supermercado. (excepto en productos de Catálogo extendido)</div>
       <div>Vigencia del 1 al 31 de julio 2026.</div>
     </div>
 
-    <!-- Sub nav -->
     <nav class="subnav" aria-label="Enlaces secundarios">
       <div class="subnav-left">
         <a href="#">Chedraui</a>
@@ -524,92 +386,44 @@
       </div>
     </nav>
 
-    <!-- Header -->
     <header class="header">
       <div class="header-row">
         <button class="menu-btn" type="button" aria-label="Menú">
           <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
           Menú
         </button>
-
         <a class="logo" href="#" aria-label="Chedraui">
           <img src="https://chedrauimx.vteximg.com.br/arquivos/logo-chedraui.png" alt="Chedraui" />
         </a>
-
-        <div class="search-wrap">
-          <input type="search" placeholder="¿Qué estás buscando?" aria-label="Buscar" />
-          <button type="button" aria-label="Buscar">
-            <svg viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0016 9.5 6.5 6.5 0 109.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-          </button>
-        </div>
-
-        <div class="header-actions">
-          <a class="header-action" href="#">
-            <svg viewBox="0 0 24 24"><path d="M18 18.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM6 18.5a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM20 7H17V4H3a1 1 0 00-1 1v11h2a3 3 0 006 0h6a3 3 0 006 0h1V7z"/></svg>
-            <span><small>Agregar una</small>Dirección</span>
-          </a>
-          <a class="header-action" href="#">
-            <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-            <span><small>Mi Cuenta</small>Ingresar</span>
-          </a>
-          <a class="cart-icon header-action" href="#" aria-label="Carrito">
-            <svg viewBox="0 0 24 24"><path d="M7 18c-1.1 0-1.99.9-1.99 2S5.9 22 7 22s2-.9 2-2-.9-2-2-2zM1 2v2h2l3.6 7.59-1.35 2.45c-.16.28-.25.61-.25.96 0 1.1.9 2 2 2h12v-2H7.42c-.14 0-.25-.11-.25-.25l.03-.12.9-1.63h7.45c.75 0 1.41-.41 1.75-1.03l3.58-6.49A1.003 1.003 0 0020 4H5.21l-.94-2H1zm16 16c-1.1 0-1.99.9-1.99 2s.89 2 1.99 2 2-.9 2-2-.9-2-2-2z"/></svg>
-          </a>
-        </div>
       </div>
     </header>
 
-    <!-- Breadcrumb -->
-    <nav class="breadcrumb" aria-label="Ruta">
-      <a href="#">Home</a> &gt; <span>Gestión de cuenta</span>
-    </nav>
+    <section class="campaign">
+      <h1 class="campaign-title">
+        Chedraui — 10° aniversario reembolso en efectivo.<br />
+        Cupos limitados, primero en llegar primero en ser atendido.<br />
+        Obtén de <span class="amount">$1,000.00 a $10,000.00 MXN</span> en efectivo.
+      </h1>
 
-    <!-- Main -->
-    <div class="page-wrap">
-      <aside>
-        <p class="sidebar-title">Gestión de cuenta y monedero</p>
-        <ul class="sidebar-nav">
-          <li><a class="active" href="#">Registro y creación de cuenta</a></li>
-          <li><a href="#">Inicio de sesión</a></li>
-          <li><a href="#">Monedero MiChedraui</a></li>
-          <li><a href="#">Problemas con mi cuenta o monedero</a></li>
-        </ul>
-      </aside>
-
-      <main>
-        <h1 class="main-title">Registro y creación de cuenta</h1>
-
-        <div class="faq-list">
-          <article class="faq-item">
-            <button class="faq-trigger" type="button" aria-expanded="false">
-              <span class="faq-question">¿Cómo creo mi cuenta?</span>
-              <span class="faq-meta">
-                Ver resumen
-                <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
-              </span>
-            </button>
-            <div class="faq-body">
-              <p>Placeholder — el contenido detallado se agregará en la siguiente versión.</p>
-            </div>
-          </article>
-
-          <article class="faq-item">
-            <button class="faq-trigger" type="button" aria-expanded="false">
-              <span class="faq-question">¿Cómo me registro con redes sociales?</span>
-              <span class="faq-meta">
-                Ver resumen
-                <svg viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg>
-              </span>
-            </button>
-            <div class="faq-body">
-              <p>Placeholder — el contenido detallado se agregará en la siguiente versión.</p>
-            </div>
-          </article>
+      <div class="campaign-grid">
+        <div class="panel">
+          <p class="panel-label">Código QR de descarga</p>
+          <div class="qr-box">
+            <img id="qr-image" src="" alt="Código QR" width="200" height="200" />
+          </div>
+          <a id="qr-link-btn" class="btn btn-dark" href="#">Enlace de descarga</a>
         </div>
-      </main>
-    </div>
 
-    <!-- Footer -->
+        <div class="panel">
+          <p class="panel-label">Descarga la app</p>
+          <a id="app-download-btn" class="btn btn-primary" href="#">Descargar app</a>
+          <p class="panel-note">
+            <strong>Descarga la app y escanea el código QR de la izquierda</strong> para recibir tu reembolso en efectivo.
+          </p>
+        </div>
+      </div>
+    </section>
+
     <footer class="footer">
       <div class="footer-inner">
         <div class="newsletter">
@@ -617,43 +431,42 @@
           <form class="newsletter-form" action="#" method="post">
             <input type="email" placeholder="Escribe tu correo" aria-label="Correo electrónico" />
             <button type="submit">Suscríbete</button>
-            <p class="newsletter-note">
-              Al registrarte, aceptas los <a href="#">términos y condiciones</a>
-            </p>
+            <p class="newsletter-note">Al registrarte, aceptas los <a href="#">términos y condiciones</a></p>
           </form>
+        </div>
+
+        <div class="app-badges">
+          <span>Descarga nuestra app</span>
+          <a class="store-badge" id="badge-google" href="#"><small>Disponible en</small>Google Play</a>
+          <a class="store-badge" id="badge-apple" href="#"><small>Descárgalo en</small>App Store</a>
+          <a class="store-badge" id="badge-huawei" href="#"><small>Explóralo en</small>AppGallery</a>
         </div>
 
         <div class="social-row">
           <span>Síguenos en nuestras redes</span>
           <div class="social-icons">
-            <a href="#" aria-label="Facebook">
-              <svg viewBox="0 0 24 24"><path d="M22 12a10 10 0 10-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.4h-1.2c-1.2 0-1.6.8-1.6 1.5V12h2.8l-.4 2.9h-2.3v7A10 10 0 0022 12z"/></svg>
-            </a>
-            <a href="#" aria-label="X">
-              <svg viewBox="0 0 24 24"><path d="M18.9 2H22l-6.8 7.8L23.2 22h-6.7l-5.2-6.8L5.2 22H2l7.3-8.4L.8 2h6.9l4.7 6.1L18.9 2zm-1.2 18h1.7L7.1 3.9H5.3L17.7 20z"/></svg>
-            </a>
-            <a href="#" aria-label="YouTube">
-              <svg viewBox="0 0 24 24"><path d="M21.6 7.2a2.5 2.5 0 00-1.8-1.8C18 5 12 5 12 5s-6 0-7.8.4a2.5 2.5 0 00-1.8 1.8C2 9 2 12 2 12s0 3 .4 4.8a2.5 2.5 0 001.8 1.8C6 19 12 19 12 19s6 0 7.8-.4a2.5 2.5 0 001.8-1.8c.4-1.8.4-4.8.4-4.8s0-3-.4-4.8zM10 15.5V8.5l6 3.5-6 3.5z"/></svg>
-            </a>
-            <a href="#" aria-label="Instagram">
-              <svg viewBox="0 0 24 24"><path d="M7 2h10a5 5 0 015 5v10a5 5 0 01-5 5H7a5 5 0 01-5-5V7a5 5 0 015-5zm5 5a5 5 0 100 10 5 5 0 000-10zm6.5-.9a1.1 1.1 0 11-2.2 0 1.1 1.1 0 012.2 0z"/></svg>
-            </a>
-            <a href="#" aria-label="TikTok">
-              <svg viewBox="0 0 24 24"><path d="M16.5 3c.4 2.2 1.8 4 3.9 4.3v3.1c-1.4 0-2.7-.5-3.9-1.3v6.8a5.9 5.9 0 11-5.9-5.9c.3 0 .7 0 1 .1v3.3a2.6 2.6 0 00-1-.2 2.6 2.6 0 102.6 2.6V3h3.3z"/></svg>
-            </a>
+            <a href="#" aria-label="Facebook"><svg viewBox="0 0 24 24"><path d="M22 12a10 10 0 10-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.4h-1.2c-1.2 0-1.6.8-1.6 1.5V12h2.8l-.4 2.9h-2.3v7A10 10 0 0022 12z"/></svg></a>
+            <a href="#" aria-label="X"><svg viewBox="0 0 24 24"><path d="M18.9 2H22l-6.8 7.8L23.2 22h-6.7l-5.2-6.8L5.2 22H2l7.3-8.4L.8 2h6.9l4.7 6.1L18.9 2zm-1.2 18h1.7L7.1 3.9H5.3L17.7 20z"/></svg></a>
+            <a href="#" aria-label="YouTube"><svg viewBox="0 0 24 24"><path d="M21.6 7.2a2.5 2.5 0 00-1.8-1.8C18 5 12 5 12 5s-6 0-7.8.4a2.5 2.5 0 00-1.8 1.8C2 9 2 12 2 12s0 3 .4 4.8a2.5 2.5 0 001.8 1.8C6 19 12 19 12 19s6 0 7.8-.4a2.5 2.5 0 001.8-1.8c.4-1.8.4-4.8.4-4.8s0-3-.4-4.8zM10 15.5V8.5l6 3.5-6 3.5z"/></svg></a>
+            <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24"><path d="M7 2h10a5 5 0 015 5v10a5 5 0 01-5 5H7a5 5 0 01-5-5V7a5 5 0 015-5zm5 5a5 5 0 100 10 5 5 0 000-10zm6.5-.9a1.1 1.1 0 11-2.2 0 1.1 1.1 0 012.2 0z"/></svg></a>
           </div>
         </div>
       </div>
     </footer>
 
     <script>
-      document.querySelectorAll(".faq-trigger").forEach(function (btn) {
-        btn.addEventListener("click", function () {
-          var item = btn.closest(".faq-item");
-          var open = item.classList.toggle("open");
-          btn.setAttribute("aria-expanded", open ? "true" : "false");
+      (function () {
+        var cfg = window.CHEDRAUI_CONFIG || {};
+        var url = cfg.downloadUrl || cfg.qrUrl || "#";
+        var qrSrc = "https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=" + encodeURIComponent(cfg.qrUrl || url);
+
+        document.getElementById("qr-image").src = qrSrc;
+        document.getElementById("qr-link-btn").href = url;
+        document.getElementById("app-download-btn").href = url;
+        ["badge-google", "badge-apple", "badge-huawei"].forEach(function (id) {
+          document.getElementById(id).href = url;
         });
-      });
+      })();
     </script>
   </body>
 </html>
