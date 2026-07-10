@@ -6,6 +6,7 @@ export function mapLandingPage(row: LandingPageRow): LandingPageConfig {
   return {
     id: row.id,
     name: row.name,
+    templateKey: row.templateKey,
     customerId: row.customerId,
     productId: row.productId,
     locale: row.locale,

@@ -1,4 +1,5 @@
 import type { DramaItem, GuideStep, LandingPageConfig } from "@lp-admin/shared";
+import { renderChedrauiLandingPage } from "./render-chedraui.js";
 
 function escapeHtml(value: string): string {
   return value
@@ -40,6 +41,13 @@ function renderInstallSteps(steps: GuideStep[]): string {
 }
 
 export function renderLandingPage(config: LandingPageConfig, visitorId?: string): string {
+  if (config.templateKey === "chedraui-es") {
+    return renderChedrauiLandingPage(config, visitorId);
+  }
+  return renderMiniShortLandingPage(config, visitorId);
+}
+
+function renderMiniShortLandingPage(config: LandingPageConfig, visitorId?: string): string {
   const downloadUrl = escapeHtml(config.downloadUrl);
   const pixelId = escapeHtml(config.pixelId);
   const leadStorageKey = escapeHtml(config.leadStorageKey);

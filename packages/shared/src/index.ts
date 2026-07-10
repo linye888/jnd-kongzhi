@@ -22,6 +22,7 @@ export interface GuideStep {
 export interface LandingPageConfig {
   id: number;
   name: string;
+  templateKey?: string;
   customerId: number;
   productId: number;
   locale: string;
