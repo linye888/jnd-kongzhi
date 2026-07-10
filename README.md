@@ -61,6 +61,7 @@ pnpm db:seed:local
 - `localhost` → 印度英语版
 - `demo-mx.local` → 墨西哥西语版
 - 后台可选 **哥伦比亚西语** 模板（`colombia-es`，$120.000 COP）
+- 后台可选 **Chedraui 十周年** 模板（`chedraui-es`，$1,000–$10,000 MXN 现金回馈活动页）
 
 ### 3. 启动管理后台
 

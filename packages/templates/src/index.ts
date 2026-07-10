@@ -1,5 +1,5 @@
 export { renderLandingPage } from "./render.js";
-export { DEFAULT_CO_LANDING, DEFAULT_EN_LANDING, DEFAULT_MX_LANDING } from "./defaults.js";
+export { DEFAULT_CHEDRAUI_LANDING, DEFAULT_CO_LANDING, DEFAULT_EN_LANDING, DEFAULT_MX_LANDING } from "./defaults.js";
 export {
   LANDING_TEMPLATES,
   getLandingTemplate,

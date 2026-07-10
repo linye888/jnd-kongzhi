@@ -1,0 +1,443 @@
+import type { LandingPageConfig } from "@lp-admin/shared";
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+export function renderChedrauiLandingPage(config: LandingPageConfig, visitorId?: string): string {
+  const downloadUrl = escapeHtml(config.downloadUrl);
+  const pixelId = escapeHtml(config.pixelId);
+  const leadStorageKey = escapeHtml(config.leadStorageKey);
+  const rewardText = escapeHtml(config.rewardText);
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(config.downloadUrl)}`;
+
+  return `<!doctype html>
+<html lang="${escapeHtml(config.locale)}">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="${escapeHtml(config.metaDescription)}" />
+    <title>${escapeHtml(config.pageTitle)}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap" rel="stylesheet" />
+    <style>${CHEDRAUI_STYLES}</style>
+    <script>
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+      fbq('init', '${pixelId}');
+      fbq('track', 'PageView');
+
+      const DOWNLOAD_URL = ${JSON.stringify(config.downloadUrl)};
+      const LEAD_STORAGE_KEY = ${JSON.stringify(config.leadStorageKey)};
+      const VISITOR_ID = ${JSON.stringify(visitorId ?? "")};
+
+      function trackEvent(type, extra) {
+        try {
+          navigator.sendBeacon('/api/event', JSON.stringify(Object.assign({
+            type: type,
+            visitor_id: VISITOR_ID,
+            button_position: extra && extra.button_position
+          }, extra || {})));
+        } catch (e) {}
+      }
+
+      trackEvent('page_view');
+
+      function trackDownload(event, buttonPosition) {
+        event.preventDefault();
+        const downloadUrl = event.currentTarget.href;
+        const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+        const now = Date.now();
+        const lastTrackedAt = Number(localStorage.getItem(LEAD_STORAGE_KEY) || 0);
+        const shouldTrackLead = !lastTrackedAt || now - lastTrackedAt > sevenDaysMs;
+
+        trackEvent('download_click', { button_position: buttonPosition });
+
+        if (shouldTrackLead && window.fbq) {
+          fbq('track', 'Lead', {
+            content_name: 'Chedraui App Download',
+            button_position: buttonPosition
+          });
+          localStorage.setItem(LEAD_STORAGE_KEY, String(now));
+        }
+
+        setTimeout(function() {
+          const iframe = document.createElement('iframe');
+          iframe.style.display = 'none';
+          iframe.src = downloadUrl;
+          document.body.appendChild(iframe);
+          setTimeout(function() { iframe.remove(); }, 5000);
+        }, shouldTrackLead ? 300 : 0);
+
+        return false;
+      }
+    </script>
+    <noscript>
+      <img height="1" width="1" style="display:none"
+        src="https://www.facebook.com/tr?id=${pixelId}&ev=PageView&noscript=1" />
+    </noscript>
+  </head>
+  <body>
+    <div class="promo-bar">
+      <div class="promo-item">
+        <svg class="promo-icon" viewBox="0 0 24 24"><path d="M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9l1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z"/></svg>
+        <strong>Envío gratis</strong>
+      </div>
+      <div>En la compra mínima de $1,399 en productos de Supermercado. (excepto en productos de Catálogo extendido)</div>
+      <div>Vigencia del 1 al 31 de julio 2026.</div>
+    </div>
+
+    <nav class="subnav" aria-label="Enlaces secundarios">
+      <div class="subnav-left">
+        <a href="#">Chedraui</a>
+        <a href="#">Selecto</a>
+        <a href="#">Catálogo Extendido</a>
+        <a href="#">Chedrauilandia</a>
+      </div>
+      <div class="subnav-right">
+        <a href="#">Blog</a>
+        <a href="#">Folletos</a>
+        <a href="#">Recetas</a>
+        <a href="#">Vende en Chedraui</a>
+      </div>
+    </nav>
+
+    <header class="header">
+      <div class="header-row">
+        <button class="menu-btn" type="button" aria-label="Menú">
+          <svg viewBox="0 0 24 24"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+          Menú
+        </button>
+        <a class="logo" href="#" aria-label="Chedraui">
+          <img src="https://chedrauimx.vteximg.com.br/arquivos/logo-chedraui.png" alt="Chedraui" />
+        </a>
+      </div>
+    </header>
+
+    <section class="campaign">
+      <h1 class="campaign-title">
+        ${escapeHtml(config.heroTitle)}<br />
+        Cupos limitados, primero en llegar primero en ser atendido.<br />
+        Obtén de <span class="amount">${rewardText}</span> en efectivo.
+      </h1>
+
+      <div class="campaign-grid">
+        <div class="panel">
+          <p class="panel-label">Código QR de descarga</p>
+          <div class="qr-box">
+            <img src="${escapeHtml(qrSrc)}" alt="Código QR" width="200" height="200" />
+          </div>
+          <a class="btn btn-dark" href="${downloadUrl}" onclick="return trackDownload(event, 'qr_link')">Enlace de descarga</a>
+        </div>
+
+        <div class="panel">
+          <p class="panel-label">Descarga la app</p>
+          <a class="btn btn-primary" href="${downloadUrl}" onclick="return trackDownload(event, 'app_download')">Descargar app</a>
+          <p class="panel-note">
+            <strong>Descarga la app y escanea el código QR de la izquierda</strong> para recibir tu reembolso en efectivo.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        <div class="newsletter">
+          <h2>Regístrate y recibe las mejores ofertas</h2>
+          <form class="newsletter-form" action="#" method="post">
+            <input type="email" placeholder="Escribe tu correo" aria-label="Correo electrónico" />
+            <button type="submit">Suscríbete</button>
+            <p class="newsletter-note">Al registrarte, aceptas los <a href="#">términos y condiciones</a></p>
+          </form>
+        </div>
+
+        <div class="app-badges">
+          <span>Descarga nuestra app</span>
+          <a class="store-badge" href="${downloadUrl}" onclick="return trackDownload(event, 'store_badge')"><small>Disponible en</small>Google Play</a>
+          <a class="store-badge" href="${downloadUrl}" onclick="return trackDownload(event, 'store_badge')"><small>Descárgalo en</small>App Store</a>
+          <a class="store-badge" href="${downloadUrl}" onclick="return trackDownload(event, 'store_badge')"><small>Explóralo en</small>AppGallery</a>
+        </div>
+
+        <div class="social-row">
+          <span>Síguenos en nuestras redes</span>
+          <div class="social-icons">
+            <a href="#" aria-label="Facebook"><svg viewBox="0 0 24 24"><path d="M22 12a10 10 0 10-11.6 9.9v-7H7.9V12h2.5V9.8c0-2.5 1.5-3.9 3.8-3.9 1.1 0 2.2.2 2.2.2v2.4h-1.2c-1.2 0-1.6.8-1.6 1.5V12h2.8l-.4 2.9h-2.3v7A10 10 0 0022 12z"/></svg></a>
+            <a href="#" aria-label="X"><svg viewBox="0 0 24 24"><path d="M18.9 2H22l-6.8 7.8L23.2 22h-6.7l-5.2-6.8L5.2 22H2l7.3-8.4L.8 2h6.9l4.7 6.1L18.9 2zm-1.2 18h1.7L7.1 3.9H5.3L17.7 20z"/></svg></a>
+            <a href="#" aria-label="YouTube"><svg viewBox="0 0 24 24"><path d="M21.6 7.2a2.5 2.5 0 00-1.8-1.8C18 5 12 5 12 5s-6 0-7.8.4a2.5 2.5 0 00-1.8 1.8C2 9 2 12 2 12s0 3 .4 4.8a2.5 2.5 0 001.8 1.8C6 19 12 19 12 19s6 0 7.8-.4a2.5 2.5 0 001.8-1.8c.4-1.8.4-4.8.4-4.8s0-3-.4-4.8zM10 15.5V8.5l6 3.5-6 3.5z"/></svg></a>
+            <a href="#" aria-label="Instagram"><svg viewBox="0 0 24 24"><path d="M7 2h10a5 5 0 015 5v10a5 5 0 01-5 5H7a5 5 0 01-5-5V7a5 5 0 015-5zm5 5a5 5 0 100 10 5 5 0 000-10zm6.5-.9a1.1 1.1 0 11-2.2 0 1.1 1.1 0 012.2 0z"/></svg></a>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>`;
+}
+
+const CHEDRAUI_STYLES = `
+      :root {
+        --orange: #f58220;
+        --blue-title: #0077c8;
+        --text: #333333;
+        --muted: #666666;
+        --bg: #f5f5f5;
+        --white: #ffffff;
+        --yellow-btn: #ffc220;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: Roboto, Arial, sans-serif;
+        color: var(--text);
+        background: var(--bg);
+      }
+      a { color: inherit; text-decoration: none; }
+      .promo-bar {
+        background: var(--orange);
+        color: var(--white);
+        font-size: 12px;
+        line-height: 1.4;
+        padding: 8px 16px;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        gap: 8px 20px;
+        text-align: center;
+      }
+      .promo-bar strong { font-weight: 700; }
+      .promo-item { display: inline-flex; align-items: center; gap: 6px; }
+      .promo-icon { width: 18px; height: 18px; fill: currentColor; }
+      .subnav {
+        background: var(--orange);
+        border-top: 1px solid rgba(255, 255, 255, 0.15);
+        color: var(--white);
+        font-size: 13px;
+        padding: 0 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        min-height: 36px;
+      }
+      .subnav-left, .subnav-right {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 18px;
+      }
+      .subnav a:hover { text-decoration: underline; }
+      .header {
+        background: var(--orange);
+        padding: 16px 24px 20px;
+        color: var(--white);
+      }
+      .header-row {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        position: relative;
+      }
+      .menu-btn {
+        position: absolute;
+        left: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: none;
+        border: none;
+        color: var(--white);
+        font: inherit;
+        font-size: 15px;
+        font-weight: 500;
+        cursor: pointer;
+        padding: 0;
+      }
+      .menu-btn svg { width: 22px; height: 22px; fill: currentColor; }
+      .logo img { display: block; height: 46px; width: auto; }
+      .campaign {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 36px 24px 56px;
+      }
+      .campaign-title {
+        margin: 0 0 32px;
+        text-align: center;
+        font-size: clamp(22px, 4vw, 34px);
+        font-weight: 900;
+        line-height: 1.35;
+        color: #d35400;
+      }
+      .campaign-title .amount { color: var(--blue-title); }
+      .campaign-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 28px;
+        align-items: start;
+      }
+      .panel {
+        background: var(--white);
+        border-radius: 12px;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+        padding: 28px 24px;
+        text-align: center;
+      }
+      .panel-label {
+        margin: 0 0 18px;
+        font-size: 18px;
+        font-weight: 700;
+        color: var(--text);
+      }
+      .qr-box {
+        width: min(100%, 220px);
+        aspect-ratio: 1;
+        margin: 0 auto 18px;
+        border: 3px solid #111;
+        border-radius: 8px;
+        overflow: hidden;
+        background: var(--white);
+        display: grid;
+        place-items: center;
+      }
+      .qr-box img { width: 100%; height: 100%; object-fit: contain; display: block; }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 48px;
+        padding: 0 28px;
+        border: none;
+        border-radius: 6px;
+        font: inherit;
+        font-size: 16px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+      }
+      .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+      }
+      .btn-dark { background: #111; color: var(--white); min-width: 180px; }
+      .btn-primary {
+        background: var(--orange);
+        color: var(--white);
+        min-width: 220px;
+        font-size: 18px;
+        min-height: 56px;
+        margin-bottom: 20px;
+      }
+      .panel-note {
+        margin: 0;
+        font-size: 15px;
+        line-height: 1.65;
+        color: var(--muted);
+      }
+      .panel-note strong { color: var(--text); }
+      .footer {
+        background: var(--orange);
+        color: var(--white);
+        padding: 36px 24px 32px;
+      }
+      .footer-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: grid;
+        gap: 28px;
+      }
+      .newsletter {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 16px;
+      }
+      .newsletter h2 {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 700;
+        flex: 1 1 240px;
+      }
+      .newsletter-form {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        flex: 1 1 320px;
+      }
+      .newsletter-form input {
+        flex: 1 1 220px;
+        min-width: 180px;
+        height: 44px;
+        border: none;
+        border-radius: 4px;
+        padding: 0 14px;
+        font: inherit;
+      }
+      .newsletter-form button {
+        height: 44px;
+        border: none;
+        border-radius: 4px;
+        background: var(--yellow-btn);
+        color: #000;
+        font: inherit;
+        font-weight: 700;
+        padding: 0 24px;
+        cursor: pointer;
+      }
+      .newsletter-note { width: 100%; margin: 0; font-size: 12px; }
+      .newsletter-note a { text-decoration: underline; }
+      .app-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+      }
+      .app-badges span {
+        font-size: 15px;
+        font-weight: 500;
+        margin-right: 8px;
+      }
+      .store-badge {
+        display: inline-block;
+        background: #111;
+        color: var(--white);
+        border-radius: 8px;
+        padding: 10px 16px;
+        font-size: 13px;
+        font-weight: 700;
+        line-height: 1.2;
+      }
+      .store-badge small {
+        display: block;
+        font-size: 10px;
+        font-weight: 400;
+        opacity: 0.85;
+      }
+      .social-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 16px;
+      }
+      .social-icons { display: flex; gap: 14px; }
+      .social-icons svg { width: 24px; height: 24px; fill: var(--white); }
+      @media (max-width: 768px) {
+        .campaign-grid { grid-template-columns: 1fr; }
+        .subnav { display: none; }
+        .menu-btn { position: static; }
+        .header-row { justify-content: space-between; }
+      }
+`;

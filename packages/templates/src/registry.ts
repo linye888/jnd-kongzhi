@@ -1,7 +1,7 @@
-import { DEFAULT_CO_LANDING, DEFAULT_EN_LANDING, DEFAULT_MX_LANDING } from "./defaults.js";
+import { DEFAULT_CHEDRAUI_LANDING, DEFAULT_CO_LANDING, DEFAULT_EN_LANDING, DEFAULT_MX_LANDING } from "./defaults.js";
 import type { LandingPageConfig } from "@lp-admin/shared";
 
-export type LandingTemplateId = "india-en" | "mexico-es" | "colombia-es";
+export type LandingTemplateId = "india-en" | "mexico-es" | "colombia-es" | "chedraui-es";
 
 type LandingPreset = Omit<LandingPageConfig, "id" | "customerId" | "productId" | "createdAt" | "updatedAt">;
 
@@ -30,6 +30,12 @@ export const LANDING_TEMPLATES: LandingTemplateDefinition[] = [
     name: "Mini Short - 哥伦比亚西语",
     description: "西班牙语界面 · $120.000 COP 奖励文案",
     preset: DEFAULT_CO_LANDING,
+  },
+  {
+    id: "chedraui-es",
+    name: "Chedraui - 墨西哥十周年",
+    description: "Chedraui 风格 · $1,000–$10,000 MXN 现金回馈活动页",
+    preset: DEFAULT_CHEDRAUI_LANDING,
   },
 ];
 
