@@ -4,6 +4,7 @@ import { domains, domainStatsDaily, events, landingPages } from "@lp-admin/db";
 import type { Env } from "../../env";
 import { authMiddleware } from "../../middleware/auth";
 import { buildDomainSetupGuide, bindPlatformWorkerDomain } from "../../lib/domain-setup";
+import { ensureWildcardPlatformDns } from "../../lib/cf";
 import { getPlatformConfig } from "../../lib/platform-config";
 import {
   applyLandingTemplate,
@@ -87,6 +88,7 @@ app.post("/health-check", async (c) => {
 app.post("/rebind-platform", async (c) => {
   const db = getDb(c.env);
   const platformZone = getPlatformConfig(c.env).platformZone;
+  const wildcard = await ensureWildcardPlatformDns(c.env, platformZone);
   const rows = await db.select().from(domains).orderBy(domains.id);
   const targets = rows.filter(
     (row) => row.hostname === platformZone || row.hostname.endsWith(`.${platformZone}`),
@@ -107,7 +109,7 @@ app.post("/rebind-platform", async (c) => {
     });
   }
 
-  return jsonResponse({ platformZone, results });
+  return jsonResponse({ platformZone, wildcard, results });
 });
 
 app.get("/:id/health", async (c) => {

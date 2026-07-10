@@ -1,5 +1,5 @@
 import type { Env } from "../env";
-import { createProxiedSubdomainRecord } from "./cf";
+import { createProxiedSubdomainRecord, ensureWildcardPlatformDns } from "./cf";
 import { getDeployTarget, getPlatformConfig, getServerIp, isIpAddress } from "./platform-config";
 
 export type DomainKind = "platform_subdomain" | "customer_owned";
