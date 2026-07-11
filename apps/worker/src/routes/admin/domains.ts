@@ -136,11 +136,11 @@ app.post("/:id/provision-dns", async (c) => {
   }
 
   const originTarget = c.env.FALLBACK_ORIGIN ?? `origin.${platformZone}`;
-  const dns = await provisionCustomerOwnedDomainDns(c.env, row.hostname, originTarget);
-  if (!dns.ok) return errorResponse(dns.message ?? "DNS 配置失败", 400);
-
   const bind = await bindLandingWorkerDomain(c.env, row.hostname);
   if (!bind.ok) return errorResponse(bind.message ?? "Worker 绑定失败", 400);
+
+  const dns = await provisionCustomerOwnedDomainDns(c.env, row.hostname, originTarget);
+  if (!dns.ok) return errorResponse(dns.message ?? "DNS 配置失败", 400);
 
   await db.update(domains).set({ sslStatus: "pending", updatedAt: nowIso() }).where(eq(domains.id, id));
   await invalidateDomainCache(c.env, row.hostname);
