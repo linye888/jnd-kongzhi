@@ -274,3 +274,86 @@ export async function createProxiedSubdomainRecord(env: Env, hostname: string, p
   }
   return { ok: false, message: err?.message ?? "DNS 记录创建失败" };
 }
+
+function splitHostname(hostname: string): { zone: string; recordName: string } | null {
+  const host = hostname.toLowerCase();
+  const parts = host.split(".");
+  if (parts.length < 2) return null;
+  const zone = parts.slice(-2).join(".");
+  const recordName = parts.length === 2 ? "@" : parts.slice(0, -2).join(".");
+  return { zone, recordName };
+}
+
+async function resolveCloudflareZoneId(env: Env, zoneName: string): Promise<string | null> {
+  if (!env.CF_API_TOKEN) return null;
+  const res = await cfFetch(env, `https://api.cloudflare.com/client/v4/zones?name=${encodeURIComponent(zoneName)}&status=active`);
+  const payload = (await res.json()) as { success: boolean; result?: Array<{ id: string; name: string }> };
+  if (!payload.success || !payload.result?.length) return null;
+  const match = payload.result.find((z) => z.name.toLowerCase() === zoneName.toLowerCase());
+  return match?.id ?? payload.result[0]?.id ?? null;
+}
+
+/** 为客户自有域（如 mx.minishort.top）创建 CNAME → origin，需该 Zone 在同一 CF 账号 */
+export async function provisionCustomerOwnedDomainDns(
+  env: Env,
+  hostname: string,
+  originTarget?: string,
+): Promise<DnsRecordResult> {
+  if (!env.CF_API_TOKEN) {
+    return { ok: false, message: "未配置 Cloudflare API 凭证" };
+  }
+
+  const parsed = splitHostname(hostname);
+  if (!parsed) return { ok: false, message: "域名格式无效" };
+
+  const zoneId = await resolveCloudflareZoneId(env, parsed.zone);
+  if (!zoneId) {
+    return { ok: false, message: `未找到 Cloudflare Zone：${parsed.zone}（请确认域名在同一 CF 账号）` };
+  }
+
+  const target = originTarget ?? env.FALLBACK_ORIGIN ?? "origin.minishort.sbs";
+  const fqdn = parsed.recordName === "@" ? parsed.zone : `${parsed.recordName}.${parsed.zone}`;
+
+  const listRes = await cfFetch(
+    env,
+    `https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records?name=${encodeURIComponent(fqdn)}`,
+  );
+  const listPayload = (await listRes.json()) as {
+    success: boolean;
+    result?: Array<{ id: string; type: string; content: string; proxied: boolean }>;
+  };
+
+  if (listPayload.success && listPayload.result?.length) {
+    const correct = listPayload.result.find(
+      (r) => r.type === "CNAME" && r.content.replace(/\.$/, "") === target && r.proxied,
+    );
+    if (correct) return { ok: true, message: `DNS 已正确：${fqdn} → ${target}` };
+
+    for (const record of listPayload.result) {
+      await cfFetch(env, `https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records/${record.id}`, {
+        method: "DELETE",
+      });
+    }
+  }
+
+  const createRes = await cfFetch(env, `https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records`, {
+    method: "POST",
+    body: JSON.stringify({
+      type: "CNAME",
+      name: parsed.recordName,
+      content: target,
+      proxied: true,
+      ttl: 1,
+      comment: `lp-admin landing ${hostname}`,
+    }),
+  });
+
+  const createPayload = (await createRes.json()) as { success: boolean; errors?: Array<{ message: string; code: number }> };
+  if (createPayload.success) {
+    return { ok: true, message: `已创建 CNAME：${fqdn} → ${target}（橙云）` };
+  }
+
+  const err = createPayload.errors?.[0];
+  if (err?.code === 81057) return { ok: true, message: "DNS 记录已存在" };
+  return { ok: false, message: err?.message ?? "DNS 创建失败" };
+}
