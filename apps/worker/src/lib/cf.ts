@@ -293,74 +293,39 @@ async function resolveCloudflareZoneId(env: Env, zoneName: string): Promise<stri
   return match?.id ?? payload.result[0]?.id ?? null;
 }
 
-/** 占位 A 记录 IP，橙云代理后由 Worker 自定义域接管流量 */
-const WORKER_DNS_PLACEHOLDER_IP = "192.0.2.1";
-
-/** 为客户自有域（同 CF 账号，如 mx.minishort.top）创建橙云 A 记录，配合 Worker 自定义域；避免 CNAME 跨 Zone 522 */
-export async function provisionCustomerOwnedDomainDns(
-  env: Env,
-  hostname: string,
-  _originTarget?: string,
-): Promise<DnsRecordResult> {
-  if (!env.CF_API_TOKEN) {
-    return { ok: false, message: "未配置 Cloudflare API 凭证" };
-  }
-
+/** 清除 hostname 上已有的 A/CNAME 记录，便于 Worker 自定义域自动接管 DNS */
+async function clearDnsRecordsForHostname(env: Env, hostname: string): Promise<DnsRecordResult> {
   const parsed = splitHostname(hostname);
   if (!parsed) return { ok: false, message: "域名格式无效" };
 
   const zoneId = await resolveCloudflareZoneId(env, parsed.zone);
-  if (!zoneId) {
-    return { ok: false, message: `未找到 Cloudflare Zone：${parsed.zone}（请确认域名在同一 CF 账号）` };
-  }
+  if (!zoneId) return { ok: false, message: `未找到 Cloudflare Zone：${parsed.zone}` };
 
   const fqdn = parsed.recordName === "@" ? parsed.zone : `${parsed.recordName}.${parsed.zone}`;
-
   const listRes = await cfFetch(
     env,
     `https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records?name=${encodeURIComponent(fqdn)}`,
   );
   const listPayload = (await listRes.json()) as {
     success: boolean;
-    result?: Array<{ id: string; type: string; content: string; proxied: boolean }>;
+    result?: Array<{ id: string; type: string }>;
   };
 
-  if (listPayload.success && listPayload.result?.length) {
-    const correct = listPayload.result.find(
-      (r) => r.type === "A" && r.content === WORKER_DNS_PLACEHOLDER_IP && r.proxied,
-    );
-    if (correct) return { ok: true, message: `DNS 已正确：${fqdn} → Worker（橙云 A）` };
+  if (!listPayload.success) return { ok: false, message: "DNS 查询失败" };
 
-    for (const record of listPayload.result) {
-      await cfFetch(env, `https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records/${record.id}`, {
-        method: "DELETE",
-      });
-    }
+  const toDelete = (listPayload.result ?? []).filter((r) => r.type === "A" || r.type === "CNAME" || r.type === "AAAA");
+  if (!toDelete.length) return { ok: true, message: `${fqdn} 无冲突 DNS 记录` };
+
+  for (const record of toDelete) {
+    await cfFetch(env, `https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records/${record.id}`, {
+      method: "DELETE",
+    });
   }
 
-  const createRes = await cfFetch(env, `https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records`, {
-    method: "POST",
-    body: JSON.stringify({
-      type: "A",
-      name: parsed.recordName,
-      content: WORKER_DNS_PLACEHOLDER_IP,
-      proxied: true,
-      ttl: 1,
-      comment: `lp-admin landing ${hostname}`,
-    }),
-  });
-
-  const createPayload = (await createRes.json()) as { success: boolean; errors?: Array<{ message: string; code: number }> };
-  if (createPayload.success) {
-    return { ok: true, message: `已创建 A 记录：${fqdn} → Worker（橙云）` };
-  }
-
-  const err = createPayload.errors?.[0];
-  if (err?.code === 81057) return { ok: true, message: "DNS 记录已存在" };
-  return { ok: false, message: err?.message ?? "DNS 创建失败" };
+  return { ok: true, message: `已清理 ${fqdn} 的旧 DNS 记录（${toDelete.length} 条）` };
 }
 
-/** 将任意 hostname 绑定到 lp-admin-worker（用于客户自有域子域） */
+/** 将任意 hostname 绑定到 lp-admin-worker（用于同 CF 账号客户域）；Worker 会自动创建托管 DNS */
 export async function bindLandingWorkerDomain(env: Env, hostname: string): Promise<DnsRecordResult> {
   if (!env.CF_ACCOUNT_ID || !env.CF_API_TOKEN) {
     return { ok: false, message: "未配置 Cloudflare API 凭证" };
@@ -373,6 +338,10 @@ export async function bindLandingWorkerDomain(env: Env, hostname: string): Promi
   if (!zoneId) {
     return { ok: false, message: `未找到 Cloudflare Zone：${parsed.zone}` };
   }
+
+  await detachWorkerCustomDomain(env, hostname);
+  const cleared = await clearDnsRecordsForHostname(env, hostname);
+  if (!cleared.ok) return cleared;
 
   const response = await cfFetch(
     env,
@@ -389,7 +358,9 @@ export async function bindLandingWorkerDomain(env: Env, hostname: string): Promi
   );
 
   const payload = (await response.json()) as { success: boolean; errors?: Array<{ message: string; code: number }> };
-  if (payload.success) return { ok: true, message: "Worker 自定义域已绑定" };
+  if (payload.success) {
+    return { ok: true, message: "Worker 自定义域已绑定，DNS 由 Cloudflare 自动托管" };
+  }
 
   const err = payload.errors?.[0];
   if (err?.code === 100117) return { ok: true, message: "Worker 自定义域可能已绑定" };
