@@ -357,3 +357,39 @@ export async function provisionCustomerOwnedDomainDns(
   if (err?.code === 81057) return { ok: true, message: "DNS 记录已存在" };
   return { ok: false, message: err?.message ?? "DNS 创建失败" };
 }
+
+/** 将任意 hostname 绑定到 lp-admin-worker（用于客户自有域子域） */
+export async function bindLandingWorkerDomain(env: Env, hostname: string): Promise<DnsRecordResult> {
+  if (!env.CF_ACCOUNT_ID || !env.CF_API_TOKEN) {
+    return { ok: false, message: "未配置 Cloudflare API 凭证" };
+  }
+
+  const parsed = splitHostname(hostname);
+  if (!parsed) return { ok: false, message: "域名格式无效" };
+
+  const zoneId = await resolveCloudflareZoneId(env, parsed.zone);
+  if (!zoneId) {
+    return { ok: false, message: `未找到 Cloudflare Zone：${parsed.zone}` };
+  }
+
+  const response = await cfFetch(
+    env,
+    `https://api.cloudflare.com/client/v4/accounts/${env.CF_ACCOUNT_ID}/workers/domains`,
+    {
+      method: "PUT",
+      body: JSON.stringify({
+        hostname,
+        service: "lp-admin-worker",
+        environment: "production",
+        zone_id: zoneId,
+      }),
+    },
+  );
+
+  const payload = (await response.json()) as { success: boolean; errors?: Array<{ message: string; code: number }> };
+  if (payload.success) return { ok: true, message: "Worker 自定义域已绑定" };
+
+  const err = payload.errors?.[0];
+  if (err?.code === 100117) return { ok: true, message: "Worker 自定义域可能已绑定" };
+  return { ok: false, message: err?.message ?? "Worker 绑定失败" };
+}

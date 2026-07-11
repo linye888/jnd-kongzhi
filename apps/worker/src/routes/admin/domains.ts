@@ -3,7 +3,7 @@ import { eq } from "drizzle-orm";
 import { domains, domainStatsDaily, events, landingPages } from "@lp-admin/db";
 import type { Env } from "../../env";
 import { authMiddleware } from "../../middleware/auth";
-import { provisionCustomerOwnedDomainDns, restoreAdminPagesDns } from "../../lib/cf";
+import { bindLandingWorkerDomain, provisionCustomerOwnedDomainDns, restoreAdminPagesDns } from "../../lib/cf";
 import { buildDomainSetupGuide, bindPlatformWorkerDomain, getDomainKind } from "../../lib/domain-setup";
 import { getPlatformConfig } from "../../lib/platform-config";
 import {
@@ -139,6 +139,9 @@ app.post("/:id/provision-dns", async (c) => {
   const dns = await provisionCustomerOwnedDomainDns(c.env, row.hostname, originTarget);
   if (!dns.ok) return errorResponse(dns.message ?? "DNS 配置失败", 400);
 
+  const bind = await bindLandingWorkerDomain(c.env, row.hostname);
+  if (!bind.ok) return errorResponse(bind.message ?? "Worker 绑定失败", 400);
+
   await db.update(domains).set({ sslStatus: "pending", updatedAt: nowIso() }).where(eq(domains.id, id));
   await invalidateDomainCache(c.env, row.hostname);
   return jsonResponse({
@@ -146,7 +149,8 @@ app.post("/:id/provision-dns", async (c) => {
     kind: "customer_owned",
     originTarget,
     setup: buildDomainSetupGuide(c.env, row.hostname),
-    ...dns,
+    dns,
+    bind,
   });
 });
 
