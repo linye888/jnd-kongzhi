@@ -3,8 +3,8 @@ import { eq } from "drizzle-orm";
 import { domains, domainStatsDaily, events, landingPages } from "@lp-admin/db";
 import type { Env } from "../../env";
 import { authMiddleware } from "../../middleware/auth";
-import { buildDomainSetupGuide, bindPlatformWorkerDomain } from "../../lib/domain-setup";
-import { restoreAdminPagesDns } from "../../lib/cf";
+import { provisionCustomerOwnedDomainDns, restoreAdminPagesDns } from "../../lib/cf";
+import { buildDomainSetupGuide, bindPlatformWorkerDomain, getDomainKind } from "../../lib/domain-setup";
 import { getPlatformConfig } from "../../lib/platform-config";
 import {
   applyLandingTemplate,
@@ -117,6 +117,37 @@ app.post("/restore-admin-pages", async (c) => {
   const result = await restoreAdminPagesDns(c.env, platformZone);
   if (!result.ok) return errorResponse(result.message ?? "恢复失败", 400);
   return jsonResponse({ platformZone, ...result });
+});
+
+app.post("/:id/provision-dns", async (c) => {
+  const id = Number(c.req.param("id"));
+  if (!Number.isFinite(id)) return errorResponse("Invalid id", 400);
+  const db = getDb(c.env);
+  const [row] = await db.select().from(domains).where(eq(domains.id, id)).limit(1);
+  if (!row) return errorResponse("Not found", 404);
+
+  const platformZone = getPlatformConfig(c.env).platformZone;
+  if (getDomainKind(row.hostname, c.env) === "platform_subdomain") {
+    const bind = await bindPlatformWorkerDomain(c.env, row.hostname);
+    if (!bind.ok) return errorResponse(bind.message ?? "绑定失败", 400);
+    await db.update(domains).set({ sslStatus: "active", updatedAt: nowIso() }).where(eq(domains.id, id));
+    await invalidateDomainCache(c.env, row.hostname);
+    return jsonResponse({ hostname: row.hostname, kind: "platform_subdomain", ...bind });
+  }
+
+  const originTarget = c.env.FALLBACK_ORIGIN ?? `origin.${platformZone}`;
+  const dns = await provisionCustomerOwnedDomainDns(c.env, row.hostname, originTarget);
+  if (!dns.ok) return errorResponse(dns.message ?? "DNS 配置失败", 400);
+
+  await db.update(domains).set({ sslStatus: "pending", updatedAt: nowIso() }).where(eq(domains.id, id));
+  await invalidateDomainCache(c.env, row.hostname);
+  return jsonResponse({
+    hostname: row.hostname,
+    kind: "customer_owned",
+    originTarget,
+    setup: buildDomainSetupGuide(c.env, row.hostname),
+    ...dns,
+  });
 });
 
 app.get("/:id/health", async (c) => {
