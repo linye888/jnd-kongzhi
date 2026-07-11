@@ -293,11 +293,14 @@ async function resolveCloudflareZoneId(env: Env, zoneName: string): Promise<stri
   return match?.id ?? payload.result[0]?.id ?? null;
 }
 
-/** 为客户自有域（如 mx.minishort.top）创建 CNAME → origin，需该 Zone 在同一 CF 账号 */
+/** 占位 A 记录 IP，橙云代理后由 Worker 自定义域接管流量 */
+const WORKER_DNS_PLACEHOLDER_IP = "192.0.2.1";
+
+/** 为客户自有域（同 CF 账号，如 mx.minishort.top）创建橙云 A 记录，配合 Worker 自定义域；避免 CNAME 跨 Zone 522 */
 export async function provisionCustomerOwnedDomainDns(
   env: Env,
   hostname: string,
-  originTarget?: string,
+  _originTarget?: string,
 ): Promise<DnsRecordResult> {
   if (!env.CF_API_TOKEN) {
     return { ok: false, message: "未配置 Cloudflare API 凭证" };
@@ -311,7 +314,6 @@ export async function provisionCustomerOwnedDomainDns(
     return { ok: false, message: `未找到 Cloudflare Zone：${parsed.zone}（请确认域名在同一 CF 账号）` };
   }
 
-  const target = originTarget ?? env.FALLBACK_ORIGIN ?? "origin.minishort.sbs";
   const fqdn = parsed.recordName === "@" ? parsed.zone : `${parsed.recordName}.${parsed.zone}`;
 
   const listRes = await cfFetch(
@@ -325,9 +327,9 @@ export async function provisionCustomerOwnedDomainDns(
 
   if (listPayload.success && listPayload.result?.length) {
     const correct = listPayload.result.find(
-      (r) => r.type === "CNAME" && r.content.replace(/\.$/, "") === target && r.proxied,
+      (r) => r.type === "A" && r.content === WORKER_DNS_PLACEHOLDER_IP && r.proxied,
     );
-    if (correct) return { ok: true, message: `DNS 已正确：${fqdn} → ${target}` };
+    if (correct) return { ok: true, message: `DNS 已正确：${fqdn} → Worker（橙云 A）` };
 
     for (const record of listPayload.result) {
       await cfFetch(env, `https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records/${record.id}`, {
@@ -339,9 +341,9 @@ export async function provisionCustomerOwnedDomainDns(
   const createRes = await cfFetch(env, `https://api.cloudflare.com/client/v4/zones/${zoneId}/dns_records`, {
     method: "POST",
     body: JSON.stringify({
-      type: "CNAME",
+      type: "A",
       name: parsed.recordName,
-      content: target,
+      content: WORKER_DNS_PLACEHOLDER_IP,
       proxied: true,
       ttl: 1,
       comment: `lp-admin landing ${hostname}`,
@@ -350,7 +352,7 @@ export async function provisionCustomerOwnedDomainDns(
 
   const createPayload = (await createRes.json()) as { success: boolean; errors?: Array<{ message: string; code: number }> };
   if (createPayload.success) {
-    return { ok: true, message: `已创建 CNAME：${fqdn} → ${target}（橙云）` };
+    return { ok: true, message: `已创建 A 记录：${fqdn} → Worker（橙云）` };
   }
 
   const err = createPayload.errors?.[0];
