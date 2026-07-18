@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { DomainSetupGuide, LandingTemplateOption } from "@lp-admin/shared";
 import DomainSetupGuidePanel from "../components/DomainSetupGuide";
+import { TemplateFacebookAdCopyPanel } from "../components/TemplateFacebookAdCopy";
 import { api, formatRate } from "../lib/api";
 import { domainPlaceholder, getPlatformConfig } from "../lib/platform-config";
 
@@ -319,6 +320,11 @@ export default function DomainsPage() {
             <p className="muted" style={{ margin: 0, gridColumn: "1 / -1" }}>
               {selectedTemplate.description} · 默认奖励：{selectedTemplate.rewardText}
             </p>
+          ) : null}
+          {templates.length > 0 ? (
+            <div style={{ gridColumn: "1 / -1" }}>
+              <TemplateFacebookAdCopyPanel templates={templates} showAll />
+            </div>
           ) : null}
           <label>
             域名
